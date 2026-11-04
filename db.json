@@ -1,0 +1,81 @@
+{
+  "tickets": [
+    {
+      "id": "TKT-1001",
+      "customerName": "Rahul Sharma",
+      "email": "rahul@gmail.com",
+      "subject": "Unable to log in",
+      "description": "I cannot access my account.",
+      "priority": "High",
+      "status": "Open",
+      "createdAt": "2026-11-01T09:30:00.000Z",
+      "assignedTo": "agent-1"
+    },
+    {
+      "id": "TKT-1002",
+      "customerName": "Priya Reddy",
+      "email": "priya@gmail.com",
+      "subject": "Payment failure",
+      "description": "My payment failed but money was deducted.",
+      "priority": "Medium",
+      "status": "Resolved",
+      "createdAt": "2026-11-01T11:00:00.000Z",
+      "assignedTo": "agent-1"
+    },
+    {
+      "id": "TKT-1003",
+      "customerName": "Arjun Kumar",
+      "email": "arjun@gmail.com",
+      "subject": "Account locked",
+      "description": "My account has been locked.",
+      "priority": "Medium",
+      "status": "Resolved",
+      "createdAt": "2026-11-02T08:00:00.000Z",
+      "assignedTo": "agent-1"
+    },
+    {
+      "customerName": "Poorvika",
+      "email": "poorvipoorvikan@gmail.com",
+      "subject": "Cancel Ticket",
+      "description": "I need to cancel my ticket\n",
+      "priority": "Medium",
+      "status": "Resolved",
+      "id": "TKT-1793604794665",
+      "createdAt": "2026-11-02T07:33:14.665Z",
+      "assignedTo": "agent-1"
+    },
+    {
+      "customerName": "Prathap Arjun Malasure",
+      "email": "arjunmalasure@gmail.com",
+      "subject": "Payment Declined",
+      "description": "I have been declined with payments multiple time",
+      "priority": "High",
+      "status": "Resolved",
+      "id": "TKT-1793605669379",
+      "createdAt": "2026-11-02T07:47:49.379Z",
+      "assignedTo": "agent-1"
+    },
+    {
+      "customerName": "Ramya",
+      "email": "ramya@gmail.com",
+      "subject": "Account locked",
+      "description": "my account has been locked",
+      "priority": "Medium",
+      "status": "In Progress",
+      "id": "TKT-1793610340858",
+      "createdAt": "2026-11-02T09:05:40.858Z",
+      "assignedTo": "agent-1"
+    },
+    {
+      "customerName": "Amritha",
+      "email": "armitha@gmail.com",
+      "subject": "Unable to log in to my account",
+      "description": "unable to login to my account, please check i need to book my tickets as soon as possible",
+      "priority": "High",
+      "status": "Resolved",
+      "id": "TKT-1793610442377",
+      "createdAt": "2026-11-02T09:07:22.377Z",
+      "assignedTo": "agent-1"
+    }
+  ]
+}
