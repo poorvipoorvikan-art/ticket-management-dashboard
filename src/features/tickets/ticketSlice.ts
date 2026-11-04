@@ -17,6 +17,7 @@ const initialState: TicketState = {
   search: "",
   status: "All",
   priority: "All",
+  assignedTo: "All",
   sortBy: "createdAt",
   order: "desc",
   page: 1,
@@ -40,6 +41,11 @@ const ticketSlice = createSlice({
 
     setPriorityFilter(state, action: { payload: string }) {
       state.priority = action.payload;
+      state.page = 1;
+    },
+
+    setAssignedToFilter(state, action: { payload: string }) {
+      state.assignedTo = action.payload;
       state.page = 1;
     },
 
@@ -153,6 +159,7 @@ export const {
   setSearch,
   setStatusFilter,
   setPriorityFilter,
+  setAssignedToFilter,
   setSorting,
   setPage,
   clearTicketError

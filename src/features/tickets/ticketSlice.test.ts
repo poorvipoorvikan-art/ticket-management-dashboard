@@ -3,6 +3,7 @@ import reducer, {
   setSearch,
   setStatusFilter,
   setPriorityFilter,
+  setAssignedToFilter,
   setSorting,
   setPage,
   clearTicketError
@@ -28,6 +29,7 @@ describe("ticketSlice", () => {
       search: "",
       status: "All",
       priority: "All",
+      assignedTo: "All",
       sortBy: "createdAt",
       order: "desc",
       page: 1,
@@ -63,6 +65,16 @@ describe("ticketSlice", () => {
     );
 
     expect(state.priority).toBe("High");
+    expect(state.page).toBe(1);
+  });
+
+  it("updates assigned agent and resets the page", () => {
+    const state = reducer(
+      { ...initialState, page: 3 },
+      setAssignedToFilter("agent-1")
+    );
+
+    expect(state.assignedTo).toBe("agent-1");
     expect(state.page).toBe(1);
   });
 

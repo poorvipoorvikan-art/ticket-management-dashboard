@@ -1,14 +1,25 @@
 import { useState } from "react";
-import type { Ticket, TicketFormData, TicketStatus } from "../types/ticket.types";
+import type {
+  Ticket,
+  TicketFormData,
+  TicketStatus
+} from "../types/ticket.types";
 import { usePermissions } from "../hooks/usePermissions";
 import { authService } from "../services/authService";
 
 interface TicketTableProps {
   tickets: Ticket[];
   onEdit: (ticket: Ticket) => void;
-  onDelete: (ticket: Ticket) => void;
+  onDelete: (ticket: Ticket, skipConfirmation?: boolean) => void;
   onUpdate: (id: string, data: TicketFormData) => Promise<Ticket>;
 }
+
+const ticketStatuses: TicketStatus[] = [
+  "Open",
+  "In Progress",
+  "Resolved",
+  "Closed"
+];
 
 export default function TicketTable({
   tickets,
@@ -28,6 +39,48 @@ export default function TicketTable({
   const [assigningTicketId, setAssigningTicketId] = useState<string | null>(null);
   const [statusError, setStatusError] = useState("");
   const [assignmentError, setAssignmentError] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<TicketStatus>("Open");
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [bulkError, setBulkError] = useState("");
+
+  const showActions =
+    canEditTicket ||
+    canDeleteTicket ||
+    canUpdateTicketStatus ||
+    canAssignTickets;
+
+  const canUseBulkActions = canDeleteTicket || canUpdateTicketStatus;
+  const selectableTickets = canUseBulkActions ? tickets : [];
+  const allSelected =
+    selectableTickets.length > 0 &&
+    selectableTickets.every((ticket) => selectedIds.includes(ticket.id));
+
+  const toggleTicket = (ticketId: string) => {
+    setSelectedIds((current) =>
+      current.includes(ticketId)
+        ? current.filter((id) => id !== ticketId)
+        : [...current, ticketId]
+    );
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds((current) =>
+        current.filter(
+          (id) => !selectableTickets.some((ticket) => ticket.id === id)
+        )
+      );
+      return;
+    }
+
+    setSelectedIds((current) => [
+      ...new Set([
+        ...current,
+        ...selectableTickets.map((ticket) => ticket.id)
+      ])
+    ]);
+  };
 
   const handleStatusChange = async (
     ticket: Ticket,
@@ -59,11 +112,45 @@ export default function TicketTable({
     }
   };
 
-  const showActions =
-    canEditTicket ||
-    canDeleteTicket ||
-    canUpdateTicketStatus ||
-    canAssignTickets;
+  const handleBulkStatusUpdate = async () => {
+    const selectedTickets = tickets.filter((ticket) =>
+      selectedIds.includes(ticket.id)
+    );
+
+    if (selectedTickets.length === 0) return;
+
+    try {
+      setBulkError("");
+      setBulkUpdating(true);
+
+      for (const ticket of selectedTickets) {
+        await onUpdate(ticket.id, { ...ticket, status: bulkStatus });
+      }
+
+      setSelectedIds([]);
+    } catch {
+      setBulkError("Some tickets could not be updated. Please try again.");
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const selectedTickets = tickets.filter((ticket) =>
+      selectedIds.includes(ticket.id)
+    );
+
+    if (selectedTickets.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Delete ${selectedTickets.length} selected ticket(s)?`
+    );
+
+    if (!confirmed) return;
+
+    selectedTickets.forEach((ticket) => onDelete(ticket, true));
+    setSelectedIds([]);
+  };
 
   return (
     <div className="w-full overflow-x-auto">
@@ -79,9 +166,81 @@ export default function TicketTable({
         </p>
       )}
 
+      {canUseBulkActions && selectedIds.length > 0 && (
+        <div className="flex flex-col gap-3 border-b border-slate-200 bg-violet-50 px-5 py-4 sm:flex-row sm:items-center">
+          <span className="text-xs font-semibold text-violet-800">
+            {selectedIds.length} selected
+          </span>
+
+          {canUpdateTicketStatus && (
+            <div className="flex items-center gap-2">
+              <select
+                value={bulkStatus}
+                onChange={(event) =>
+                  setBulkStatus(event.target.value as TicketStatus)
+                }
+                aria-label="Bulk status"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
+              >
+                {ticketStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => void handleBulkStatusUpdate()}
+                disabled={bulkUpdating}
+                className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                {bulkUpdating ? "Updating..." : "Update status"}
+              </button>
+            </div>
+          )}
+
+          {canDeleteTicket && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={bulkUpdating}
+              className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+            >
+              Delete selected
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setSelectedIds([])}
+            className="text-xs text-slate-500 hover:text-slate-800 sm:ml-auto"
+          >
+            Clear selection
+          </button>
+
+          {bulkError && (
+            <p className="text-xs text-rose-600" role="alert">
+              {bulkError}
+            </p>
+          )}
+        </div>
+      )}
+
       <table className="w-full min-w-[900px] border-collapse text-left">
         <thead className="bg-slate-50">
           <tr>
+            {canUseBulkActions && (
+              <th className="w-12 px-5 py-3">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  aria-label="Select all tickets on this page"
+                  className="size-4 rounded border-slate-300 accent-violet-600"
+                />
+              </th>
+            )}
             <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Ticket
             </th>
@@ -113,6 +272,18 @@ export default function TicketTable({
         <tbody className="divide-y divide-slate-100">
           {tickets.map((ticket) => (
             <tr key={ticket.id} className="transition hover:bg-violet-50/40">
+              {canUseBulkActions && (
+                <td className="px-5 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(ticket.id)}
+                    onChange={() => toggleTicket(ticket.id)}
+                    aria-label={`Select ${ticket.subject}`}
+                    className="size-4 rounded border-slate-300 accent-violet-600"
+                  />
+                </td>
+              )}
+
               <td className="px-5 py-4">
                 <p className="text-xs font-semibold text-violet-700">
                   {ticket.id}
@@ -159,10 +330,11 @@ export default function TicketTable({
                     aria-label={`Update status for ${ticket.subject}`}
                     className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-700 disabled:opacity-50"
                   >
-                    <option value="Open">Open</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Resolved">Resolved</option>
-                    <option value="Closed">Closed</option>
+                    {ticketStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
                   </select>
                 ) : (
                   <span

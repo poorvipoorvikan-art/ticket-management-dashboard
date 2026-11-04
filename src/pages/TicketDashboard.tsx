@@ -1,16 +1,19 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../hooks/useAppDispatch";
 import { useAppSelector } from "../hooks/useAppSelector";
 import {
   setSearch,
   setStatusFilter,
+  setPriorityFilter,
+  setAssignedToFilter,
   setSorting,
   setPage
 } from "../features/tickets/ticketSlice";
-import { useNavigate } from "react-router-dom";
 import { useTickets } from "../hooks/useTickets";
 import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermissions";
+import { authService } from "../services/authService";
 import TicketTable from "../components/TicketTable";
 import TicketForm from "../components/TicketForm";
 import type { Ticket, TicketFormData } from "../types/ticket.types";
@@ -32,12 +35,14 @@ export default function TicketDashboard() {
   const {
     search: searchTerm,
     status: statusFilter,
-    priority: statePriority,
+    priority: priorityFilter,
+    assignedTo,
     sortBy,
     order,
     page: currentPage,
     limit: PAGE_SIZE
   } = useAppSelector((state) => state.tickets);
+
   const selectedSort: SortOption =
     sortBy === "priority" ? "priority" : order === "asc" ? "oldest" : "newest";
 
@@ -88,12 +93,17 @@ export default function TicketDashboard() {
     }
   };
 
-  const handleDelete = async (ticket: Ticket) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${ticket.subject}"?`
-    );
+  const handleDelete = async (
+    ticket: Ticket,
+    skipConfirmation = false
+  ) => {
+    if (!skipConfirmation) {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete "${ticket.subject}"?`
+      );
 
-    if (!confirmed) return;
+      if (!confirmed) return;
+    }
 
     try {
       setActionError("");
@@ -132,10 +142,19 @@ export default function TicketDashboard() {
 
     const matchesStatus =
       statusFilter === "All" || ticket.status === statusFilter;
-    const matchesPriority =
-      statePriority === "All" || ticket.priority === statePriority;
 
-    return matchesSearch && matchesStatus && matchesPriority;
+    const matchesPriority =
+      priorityFilter === "All" || ticket.priority === priorityFilter;
+
+    const matchesAssignedTo =
+      assignedTo === "All" || ticket.assignedTo === assignedTo;
+
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesPriority &&
+      matchesAssignedTo
+    );
   });
 
   const priorityOrder = {
@@ -394,9 +413,9 @@ export default function TicketDashboard() {
                 <input
                   type="search"
                   value={searchTerm}
-                  onChange={(event) => {
-                    dispatch(setSearch(event.target.value));
-                  }}
+                  onChange={(event) =>
+                    dispatch(setSearch(event.target.value))
+                  }
                   placeholder="Search tickets..."
                   aria-label="Search tickets"
                   className="w-full py-2.5 text-xs outline-none placeholder:text-slate-400"
@@ -405,9 +424,9 @@ export default function TicketDashboard() {
 
               <select
                 value={statusFilter}
-                onChange={(event) => {
-                  dispatch(setStatusFilter(event.target.value));
-                }}
+                onChange={(event) =>
+                  dispatch(setStatusFilter(event.target.value))
+                }
                 aria-label="Filter tickets by status"
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600"
               >
@@ -416,6 +435,37 @@ export default function TicketDashboard() {
                 <option value="In Progress">In Progress</option>
                 <option value="Resolved">Resolved</option>
                 <option value="Closed">Closed</option>
+              </select>
+
+              <select
+                value={priorityFilter}
+                onChange={(event) =>
+                  dispatch(setPriorityFilter(event.target.value))
+                }
+                aria-label="Filter tickets by priority"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600"
+              >
+                <option value="All">All priorities</option>
+                <option value="High">High priority</option>
+                <option value="Medium">Medium priority</option>
+                <option value="Low">Low priority</option>
+              </select>
+
+              <select
+                value={assignedTo}
+                onChange={(event) =>
+                  dispatch(setAssignedToFilter(event.target.value))
+                }
+                aria-label="Filter tickets by assigned agent"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600"
+              >
+                <option value="All">All agents</option>
+                <option value="">Unassigned</option>
+                {authService.getSupportAgents().map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
               </select>
 
               <select
@@ -500,7 +550,9 @@ export default function TicketDashboard() {
                   <button
                     type="button"
                     disabled={safeCurrentPage === 1}
-                    onClick={() => dispatch(setPage(Math.max(1, safeCurrentPage - 1)))}
+                    onClick={() =>
+                      dispatch(setPage(Math.max(1, safeCurrentPage - 1)))
+                    }
                     className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40"
                   >
                     Previous
@@ -513,7 +565,11 @@ export default function TicketDashboard() {
                   <button
                     type="button"
                     disabled={safeCurrentPage === totalPages}
-                    onClick={() => dispatch(setPage(Math.min(totalPages, safeCurrentPage + 1)))}
+                    onClick={() =>
+                      dispatch(
+                        setPage(Math.min(totalPages, safeCurrentPage + 1))
+                      )
+                    }
                     className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40"
                   >
                     Next
