@@ -29,7 +29,7 @@
       "subject": "Account locked",
       "description": "My account has been locked.",
       "priority": "Medium",
-      "status": "Resolved",
+      "status": "In Progress",
       "createdAt": "2026-11-02T08:00:00.000Z",
       "assignedTo": "agent-1"
     },
@@ -72,7 +72,7 @@
       "subject": "Unable to log in to my account",
       "description": "unable to login to my account, please check i need to book my tickets as soon as possible",
       "priority": "High",
-      "status": "Resolved",
+      "status": "Open",
       "id": "TKT-1793610442377",
       "createdAt": "2026-11-02T09:07:22.377Z",
       "assignedTo": "agent-1"
