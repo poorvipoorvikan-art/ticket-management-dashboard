@@ -1,14 +1,15 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { ticketService, type TicketQueryParams } from "../../services/ticketService";
+import {
+  ticketService} from "../../services/ticketService";
 import type { Ticket, TicketFormData } from "../../types/ticket.types";
 
 export const fetchTickets = createAsyncThunk<
   Ticket[],
-  TicketQueryParams | undefined,
+  void,
   { rejectValue: string }
->("tickets/fetchTickets", async (params, { rejectWithValue, signal }) => {
+>("tickets/fetchTickets", async (_, { rejectWithValue, signal }) => {
   try {
-    return await ticketService.getTickets(params, signal);
+    return await ticketService.getTickets(undefined, signal);
   } catch (error) {
     return rejectWithValue(
       error instanceof Error ? error.message : "Unable to load tickets."
