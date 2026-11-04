@@ -46,7 +46,7 @@ npm -v
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/ticket-management-dashboard.git
+git clone https://github.com/poorvipoorvikan-art/ticket-management-dashboard.git
 cd ticket-management-dashboard
 npm install
 ```
