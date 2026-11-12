@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTickets } from "../hooks/useTickets";
 import { useAuth } from "../hooks/useAuth";
@@ -10,6 +10,16 @@ import type { Ticket, TicketFormData } from "../types/ticket.types";
 type SortOption = "newest" | "oldest" | "priority";
 
 const PAGE_SIZE = 5;
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) return "🌄Good morning";
+  if (hour >= 12 && hour < 17) return "🌇Good afternoon";
+  if (hour >= 17 && hour < 21) return "🌆Good evening";
+
+  return "🌃Good night";
+};
 
 export default function TicketDashboard() {
   const {
@@ -33,6 +43,15 @@ export default function TicketDashboard() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [currentPage, setCurrentPage] = useState(1);
+  const [greeting, setGreeting] = useState(getGreeting);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGreeting(getGreeting());
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -423,7 +442,7 @@ export default function TicketDashboard() {
               </div>
 
               <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-[34px]">
-                Good morning, {user?.name.split(" ")[0] ?? "there"}
+                {greeting}, {user?.name.split(" ")[0] ?? "there"}
                 <span className="ml-2 text-indigo-500">✦</span>
               </h1>
 
