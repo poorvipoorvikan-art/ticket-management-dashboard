@@ -1,45 +1,61 @@
-import { useCallback, useEffect } from "react";
-import { useAppDispatch } from "./useAppDispatch";
-import { useAppSelector } from "./useAppSelector";
 import {
-  createTicket as createTicketThunk,
-  deleteTicket as deleteTicketThunk,
-  fetchTickets,
-  updateTicket as updateTicketThunk
-} from "../features/tickets/ticketThunks";
+  useGetTicketsQuery,
+  useCreateTicketMutation,
+  useUpdateTicketMutation,
+  useDeleteTicketMutation
+} from "../features/tickets/ticketApi";
 import type { Ticket, TicketFormData } from "../types/ticket.types";
 
+function getErrorMessage(error: unknown): string {
+  if (typeof error === "object" && error !== null) {
+    if ("data" in error && typeof error.data === "string") {
+      return error.data;
+    }
+
+    if ("error" in error && typeof error.error === "string") {
+      return error.error;
+    }
+
+    if ("message" in error && typeof error.message === "string") {
+      return error.message;
+    }
+  }
+
+  return "An unexpected error occurred.";
+}
+
 export function useTickets() {
-  const dispatch = useAppDispatch();
-  const { tickets, loading, error } = useAppSelector((state) => state.tickets);
+  const {
+    data: tickets = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch
+  } = useGetTicketsQuery();
 
-  const refetch = useCallback(() => {
-    return dispatch(fetchTickets(undefined)).unwrap();
-  }, [dispatch]);
-
-  useEffect(() => {
-    void refetch().catch(() => undefined);
-  }, [refetch]);
+  const [createMutation] = useCreateTicketMutation();
+  const [updateMutation] = useUpdateTicketMutation();
+  const [deleteMutation] = useDeleteTicketMutation();
 
   const createTicket = async (data: TicketFormData): Promise<Ticket> => {
-    return dispatch(createTicketThunk(data)).unwrap();
+    return createMutation(data).unwrap();
   };
 
   const updateTicket = async (
     id: string,
     data: TicketFormData
   ): Promise<Ticket> => {
-    return dispatch(updateTicketThunk({ id, data })).unwrap();
+    return updateMutation({ id, data }).unwrap();
   };
 
   const deleteTicket = async (id: string): Promise<void> => {
-    await dispatch(deleteTicketThunk(id)).unwrap();
+    await deleteMutation(id).unwrap();
   };
 
   return {
     tickets,
-    loading,
-    error: error ?? "",
+    loading: isLoading || isFetching,
+    error: error ? getErrorMessage(error) : "",
     refetch,
     createTicket,
     updateTicket,

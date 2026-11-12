@@ -1,24 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../hooks/useAppDispatch";
-import { useAppSelector } from "../hooks/useAppSelector";
-import {
-  setSearch,
-  setStatusFilter,
-  setPriorityFilter,
-  setAssignedToFilter,
-  setSorting,
-  setPage
-} from "../features/tickets/ticketSlice";
 import { useTickets } from "../hooks/useTickets";
 import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermissions";
-import { authService } from "../services/authService";
 import TicketTable from "../components/TicketTable";
 import TicketForm from "../components/TicketForm";
 import type { Ticket, TicketFormData } from "../types/ticket.types";
 
 type SortOption = "newest" | "oldest" | "priority";
+
+const PAGE_SIZE = 5;
 
 export default function TicketDashboard() {
   const {
@@ -31,42 +22,26 @@ export default function TicketDashboard() {
     deleteTicket
   } = useTickets();
 
-  const dispatch = useAppDispatch();
-  const {
-    search: searchTerm,
-    status: statusFilter,
-    priority: priorityFilter,
-    assignedTo,
-    sortBy,
-    order,
-    page: currentPage,
-    limit: PAGE_SIZE
-  } = useAppSelector((state) => state.tickets);
-
-  const selectedSort: SortOption =
-    sortBy === "priority" ? "priority" : order === "asc" ? "oldest" : "newest";
-
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { canViewAllTickets } = usePermissions();
+
+  const [showForm, setShowForm] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [actionError, setActionError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
   };
 
-  const handleStatusFilter = (status: string) => {
-    dispatch(setStatusFilter(status));
-    dispatch(setPage(1));
-  };
-
   const visibleTickets = canViewAllTickets
     ? tickets
     : tickets.filter((ticket) => ticket.assignedTo === user?.id);
-
-  const [showForm, setShowForm] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [actionError, setActionError] = useState("");
 
   const openCreateForm = () => {
     setSelectedTicket(null);
@@ -78,6 +53,12 @@ export default function TicketDashboard() {
     setSelectedTicket(ticket);
     setActionError("");
     setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setSelectedTicket(null);
+    setActionError("");
   };
 
   const handleSubmit = async (data: TicketFormData) => {
@@ -101,7 +82,7 @@ export default function TicketDashboard() {
   const handleDelete = async (
     ticket: Ticket,
     skipConfirmation = false
-  ) => {
+  ): Promise<void> => {
     if (!skipConfirmation) {
       const confirmed = window.confirm(
         `Are you sure you want to delete "${ticket.subject}"?`
@@ -115,13 +96,8 @@ export default function TicketDashboard() {
       await deleteTicket(ticket.id);
     } catch {
       setActionError("Unable to delete ticket. Please try again.");
+      throw new Error("Ticket deletion failed");
     }
-  };
-
-  const closeForm = () => {
-    setShowForm(false);
-    setSelectedTicket(null);
-    setActionError("");
   };
 
   const openCount = visibleTickets.filter(
@@ -148,18 +124,7 @@ export default function TicketDashboard() {
     const matchesStatus =
       statusFilter === "All" || ticket.status === statusFilter;
 
-    const matchesPriority =
-      priorityFilter === "All" || ticket.priority === priorityFilter;
-
-    const matchesAssignedTo =
-      assignedTo === "All" || ticket.assignedTo === assignedTo;
-
-    return (
-      matchesSearch &&
-      matchesStatus &&
-      matchesPriority &&
-      matchesAssignedTo
-    );
+    return matchesSearch && matchesStatus;
   });
 
   const priorityOrder = {
@@ -176,12 +141,17 @@ export default function TicketDashboard() {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
 
-    return order === "desc" ? dateB - dateA : dateA - dateB;
+    return sortBy === "newest" ? dateB - dateA : dateA - dateB;
   });
 
-  const totalPages = Math.max(1, Math.ceil(sortedTickets.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedTickets.length / PAGE_SIZE)
+  );
+
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+
   const paginatedTickets = sortedTickets.slice(
     startIndex,
     startIndex + PAGE_SIZE
@@ -193,34 +163,39 @@ export default function TicketDashboard() {
       value: visibleTickets.length,
       note: "Support requests",
       icon: "▤",
-      color: "bg-violet-100 text-violet-600",
-      filter: "All"
+      color: "bg-violet-100 text-violet-600"
     },
     {
       label: "Open tickets",
       value: openCount,
       note: "Awaiting response",
       icon: "◷",
-      color: "bg-blue-100 text-blue-600",
-      filter: "Open"
+      color: "bg-blue-100 text-blue-600"
     },
     {
       label: "In progress",
       value: progressCount,
       note: "Currently being handled",
       icon: "↻",
-      color: "bg-orange-100 text-orange-600",
-      filter: "In Progress"
+      color: "bg-orange-100 text-orange-600"
     },
     {
       label: "Resolved",
       value: resolvedCount,
       note: "Successfully completed",
       icon: "✓",
-      color: "bg-emerald-100 text-emerald-600",
-      filter: "Resolved"
+      color: "bg-emerald-100 text-emerald-600"
     }
   ];
+
+  const userInitials = user?.name
+    ? user.name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "U";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -244,15 +219,18 @@ export default function TicketDashboard() {
         <nav className="space-y-1" aria-label="Main navigation">
           <a
             href="#dashboard"
-            onClick={() => handleStatusFilter("All")}
             className="flex items-center gap-3 rounded-lg bg-violet-600/20 px-3 py-3 text-sm font-medium text-white"
           >
             <span>▦</span>
             Overview
           </a>
+
           <a
             href="#tickets"
-            onClick={() => handleStatusFilter("All")}
+            onClick={() => {
+              setStatusFilter("All");
+              setCurrentPage(1);
+            }}
             className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
           >
             <span>▤</span>
@@ -261,17 +239,25 @@ export default function TicketDashboard() {
               {visibleTickets.length}
             </span>
           </a>
+
           <a
             href="#tickets"
-            onClick={() => handleStatusFilter("Open")}
+            onClick={() => {
+              setStatusFilter("Open");
+              setCurrentPage(1);
+            }}
             className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
           >
             <span>◷</span>
             Open Tickets
           </a>
+
           <a
             href="#tickets"
-            onClick={() => handleStatusFilter("Resolved")}
+            onClick={() => {
+              setStatusFilter("Resolved");
+              setCurrentPage(1);
+            }}
             className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
           >
             <span>✓</span>
@@ -281,17 +267,14 @@ export default function TicketDashboard() {
 
         <div className="mt-auto flex items-center gap-3 border-t border-white/10 px-2 pt-5">
           <div className="grid size-9 place-items-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
-            {user?.name
-              .split(" ")
-              .map((part) => part[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
+            {userInitials}
           </div>
+
           <div className="min-w-0">
             <p className="text-xs font-semibold text-white">{user?.name}</p>
             <p className="mt-1 text-[11px] text-slate-400">{user?.role}</p>
           </div>
+
           <button
             type="button"
             onClick={handleLogout}
@@ -306,7 +289,9 @@ export default function TicketDashboard() {
         <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-5 sm:px-8">
           <div className="text-xs text-slate-500">
             Workspace <span className="mx-2 text-slate-300">/</span>
-            <strong className="font-semibold text-slate-800">Overview</strong>
+            <strong className="font-semibold text-slate-800">
+              Overview
+            </strong>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
@@ -317,6 +302,7 @@ export default function TicketDashboard() {
                 year: "numeric"
               })}
             </span>
+
             <button
               type="button"
               aria-label="Notifications"
@@ -325,6 +311,7 @@ export default function TicketDashboard() {
               ♧
               <span className="absolute right-0 top-0 size-2 rounded-full bg-rose-400" />
             </button>
+
             <button
               type="button"
               onClick={handleLogout}
@@ -332,13 +319,9 @@ export default function TicketDashboard() {
             >
               Log out
             </button>
+
             <div className="grid size-9 place-items-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
-              {user?.name
-                .split(" ")
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
+              {userInitials}
             </div>
           </div>
         </header>
@@ -349,10 +332,12 @@ export default function TicketDashboard() {
               <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-violet-600">
                 SUPPORT OVERVIEW
               </p>
+
               <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
                 Good morning, {user?.name.split(" ")[0] ?? "there"}
                 <span className="ml-2 text-violet-500">✦</span>
               </h1>
+
               <p className="mt-2 text-sm text-slate-500">
                 Here's what's happening with your support tickets today.
               </p>
@@ -374,38 +359,30 @@ export default function TicketDashboard() {
             aria-label="Ticket statistics"
             className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
           >
-            {stats.map((stat) => {
-              const isSelected = statusFilter === stat.filter;
+            {stats.map((stat) => (
+              <article
+                key={stat.label}
+                className="rounded-xl border border-slate-200 bg-white p-5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-500">
+                    {stat.label}
+                  </span>
 
-              return (
-                <button
-                  key={stat.label}
-                  type="button"
-                  onClick={() => handleStatusFilter(stat.filter)}
-                  aria-pressed={isSelected}
-                  className={`rounded-xl border bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-violet-500 ${
-                    isSelected
-                      ? "border-violet-400 ring-1 ring-violet-200"
-                      : "border-slate-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">
-                      {stat.label}
-                    </span>
-                    <span
-                      className={`grid size-9 place-items-center rounded-lg text-base ${stat.color}`}
-                    >
-                      {stat.icon}
-                    </span>
-                  </div>
-                  <strong className="mt-3 block text-3xl font-bold tracking-tight text-slate-900">
-                    {stat.value}
-                  </strong>
-                  <p className="mt-1 text-xs text-slate-500">{stat.note}</p>
-                </button>
-              );
-            })}
+                  <span
+                    className={`grid size-9 place-items-center rounded-lg text-base ${stat.color}`}
+                  >
+                    {stat.icon}
+                  </span>
+                </div>
+
+                <strong className="mt-3 block text-3xl font-bold tracking-tight text-slate-900">
+                  {stat.value}
+                </strong>
+
+                <p className="mt-1 text-xs text-slate-500">{stat.note}</p>
+              </article>
+            ))}
           </section>
 
           <section
@@ -415,8 +392,9 @@ export default function TicketDashboard() {
             <div className="flex flex-col justify-between gap-4 px-5 py-5 sm:flex-row sm:items-center sm:px-6">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">
-                  {statusFilter === "All" ? "Recent tickets" : `${statusFilter} tickets`}
+                  Recent tickets
                 </h2>
+
                 <p className="mt-1 text-xs text-slate-500">
                   Manage and track customer support requests.
                 </p>
@@ -434,10 +412,14 @@ export default function TicketDashboard() {
             <div className="flex flex-col gap-3 px-5 pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
               <label className="flex w-full max-w-sm items-center gap-2 rounded-lg border border-slate-200 px-3">
                 <span className="text-lg text-slate-400">⌕</span>
+
                 <input
                   type="search"
                   value={searchTerm}
-                  onChange={(event) => dispatch(setSearch(event.target.value))}
+                  onChange={(event) => {
+                    setSearchTerm(event.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder="Search tickets..."
                   aria-label="Search tickets"
                   className="w-full py-2.5 text-xs outline-none placeholder:text-slate-400"
@@ -446,7 +428,10 @@ export default function TicketDashboard() {
 
               <select
                 value={statusFilter}
-                onChange={(event) => handleStatusFilter(event.target.value)}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  setCurrentPage(1);
+                }}
                 aria-label="Filter tickets by status"
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600"
               >
@@ -458,42 +443,10 @@ export default function TicketDashboard() {
               </select>
 
               <select
-                value={priorityFilter}
-                onChange={(event) => dispatch(setPriorityFilter(event.target.value))}
-                aria-label="Filter tickets by priority"
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600"
-              >
-                <option value="All">All priorities</option>
-                <option value="High">High priority</option>
-                <option value="Medium">Medium priority</option>
-                <option value="Low">Low priority</option>
-              </select>
-
-              <select
-                value={assignedTo}
-                onChange={(event) => dispatch(setAssignedToFilter(event.target.value))}
-                aria-label="Filter tickets by assigned agent"
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600"
-              >
-                <option value="All">All agents</option>
-                <option value="">Unassigned</option>
-                {authService.getSupportAgents().map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={selectedSort}
+                value={sortBy}
                 onChange={(event) => {
-                  const value = event.target.value as SortOption;
-                  dispatch(
-                    setSorting({
-                      sortBy: value === "priority" ? "priority" : "createdAt",
-                      order: value === "oldest" ? "asc" : "desc"
-                    })
-                  );
+                  setSortBy(event.target.value as SortOption);
+                  setCurrentPage(1);
                 }}
                 aria-label="Sort tickets"
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600"
@@ -519,6 +472,7 @@ export default function TicketDashboard() {
                 role="alert"
               >
                 <p>{error}</p>
+
                 <button
                   type="button"
                   onClick={() => void refetch()}
@@ -548,6 +502,7 @@ export default function TicketDashboard() {
             {!loading && !error && sortedTickets.length > 0 && (
               <TicketTable
                 tickets={paginatedTickets}
+                allTickets={visibleTickets}
                 onEdit={openEditForm}
                 onDelete={handleDelete}
                 onUpdate={updateTicket}
@@ -566,7 +521,7 @@ export default function TicketDashboard() {
                   <button
                     type="button"
                     disabled={safeCurrentPage === 1}
-                    onClick={() => dispatch(setPage(Math.max(1, safeCurrentPage - 1)))}
+                    onClick={() => setCurrentPage((page) => page - 1)}
                     className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40"
                   >
                     Previous
@@ -579,9 +534,7 @@ export default function TicketDashboard() {
                   <button
                     type="button"
                     disabled={safeCurrentPage === totalPages}
-                    onClick={() =>
-                      dispatch(setPage(Math.min(totalPages, safeCurrentPage + 1)))
-                    }
+                    onClick={() => setCurrentPage((page) => page + 1)}
                     className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40"
                   >
                     Next
@@ -611,6 +564,7 @@ export default function TicketDashboard() {
                 <p className="text-[10px] font-bold tracking-[0.16em] text-violet-600">
                   TICKET MANAGEMENT
                 </p>
+
                 <h2
                   id="ticket-form-title"
                   className="mt-2 text-xl font-bold text-slate-900"

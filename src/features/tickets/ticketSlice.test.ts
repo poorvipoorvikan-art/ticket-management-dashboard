@@ -6,26 +6,16 @@ import reducer, {
   setAssignedToFilter,
   setSorting,
   setPage,
-  clearTicketError
+  toggleTicketSelection,
+  toggleTicketsSelection,
+  clearSelectedTickets
 } from "./ticketSlice";
-import {
-  createTicket,
-  deleteTicket,
-  fetchTickets,
-  updateTicket
-} from "./ticketThunks";
 
 const initialState = reducer(undefined, { type: "unknown" });
 
 describe("ticketSlice", () => {
   it("returns the expected initial state", () => {
     expect(initialState).toEqual({
-      tickets: [],
-      loading: false,
-      error: null,
-      creating: false,
-      updatingIds: [],
-      deletingIds: [],
       search: "",
       status: "All",
       priority: "All",
@@ -34,7 +24,7 @@ describe("ticketSlice", () => {
       order: "desc",
       page: 1,
       limit: 5,
-      total: 0
+      selectedTicketIds: []
     });
   });
 
@@ -93,61 +83,76 @@ describe("ticketSlice", () => {
     expect(reducer(initialState, setPage(2)).page).toBe(2);
   });
 
-  it("clears the ticket error", () => {
-    const state = reducer(
-      { ...initialState, error: "Something failed" },
-      clearTicketError()
+  it("selects and deselects an individual ticket", () => {
+    const selectedState = reducer(
+      initialState,
+      toggleTicketSelection("TKT-101")
     );
 
-    expect(state.error).toBeNull();
+    expect(selectedState.selectedTicketIds).toEqual(["TKT-101"]);
+
+    const deselectedState = reducer(
+      selectedState,
+      toggleTicketSelection("TKT-101")
+    );
+
+    expect(deselectedState.selectedTicketIds).toEqual([]);
   });
 
-  it("sets loading when fetching tickets", () => {
-    const state = reducer(initialState, fetchTickets.pending("", undefined));
-
-    expect(state.loading).toBe(true);
-    expect(state.error).toBeNull();
-  });
-
-  it("stores an error when fetching tickets fails", () => {
+  it("selects multiple tickets", () => {
     const state = reducer(
       initialState,
-      fetchTickets.rejected(
-        new Error("Request failed"),
-        "",
-        undefined,
-        "Unable to load tickets."
-      )
+      toggleTicketsSelection(["TKT-101", "TKT-102"])
     );
 
-    expect(state.loading).toBe(false);
-    expect(state.error).toBe("Unable to load tickets.");
+    expect(state.selectedTicketIds).toEqual([
+      "TKT-101",
+      "TKT-102"
+    ]);
   });
 
-  it("sets creating when ticket creation starts", () => {
+  it("deselects all tickets on the current page", () => {
+    const stateWithSelection = {
+      ...initialState,
+      selectedTicketIds: ["TKT-101", "TKT-102", "TKT-103"]
+    };
+
     const state = reducer(
-      initialState,
-      createTicket.pending("", {} as never)
+      stateWithSelection,
+      toggleTicketsSelection(["TKT-101", "TKT-102"])
     );
 
-    expect(state.creating).toBe(true);
+    expect(state.selectedTicketIds).toEqual(["TKT-103"]);
   });
 
-  it("tracks an updating ticket while the update is pending", () => {
+  it("does not add duplicate ticket IDs", () => {
+    const stateWithSelection = {
+      ...initialState,
+      selectedTicketIds: ["TKT-101"]
+    };
+
     const state = reducer(
-      initialState,
-      updateTicket.pending("", { id: "ticket-1" } as never)
+      stateWithSelection,
+      toggleTicketsSelection(["TKT-101", "TKT-102"])
     );
 
-    expect(state.updatingIds).toContain("ticket-1");
+    expect(state.selectedTicketIds).toEqual([
+      "TKT-101",
+      "TKT-102"
+    ]);
   });
 
-  it("tracks a deleting ticket while deletion is pending", () => {
+  it("clears all selected tickets", () => {
+    const stateWithSelection = {
+      ...initialState,
+      selectedTicketIds: ["TKT-101", "TKT-102"]
+    };
+
     const state = reducer(
-      initialState,
-      deleteTicket.pending("", "ticket-1")
+      stateWithSelection,
+      clearSelectedTickets()
     );
 
-    expect(state.deletingIds).toContain("ticket-1");
+    expect(state.selectedTicketIds).toEqual([]);
   });
 });

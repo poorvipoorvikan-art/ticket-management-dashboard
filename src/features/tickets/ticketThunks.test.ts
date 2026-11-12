@@ -1,20 +1,18 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
-import ticketReducer from "./ticketSlice";
-import {
-  createTicket,
-  deleteTicket,
-  fetchTickets,
-  updateTicket
-} from "./ticketThunks";
+import { beforeEach, describe, expect, it } from "vitest";
+import { ticketApi } from "./ticketApi";
 import { mockTickets } from "../../test/mocks/handlers";
 import { server } from "../../test/mocks/server";
 import type { TicketFormData } from "../../types/ticket.types";
 
 const createStore = () =>
   configureStore({
-    reducer: { tickets: ticketReducer }
+    reducer: {
+      [ticketApi.reducerPath]: ticketApi.reducer
+    },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(ticketApi.middleware)
   });
 
 const ticketFormData: TicketFormData = {
@@ -28,111 +26,48 @@ const ticketFormData: TicketFormData = {
 };
 
 describe("ticket API integration", () => {
+  beforeEach(() => {
+    server.resetHandlers();
+  });
+
   it("fetches tickets successfully", async () => {
     const store = createStore();
-    const result = await store.dispatch(fetchTickets());
 
-    expect(fetchTickets.fulfilled.match(result)).toBe(true);
-    expect(store.getState().tickets.tickets).toEqual(mockTickets);
-    expect(store.getState().tickets.loading).toBe(false);
-    expect(store.getState().tickets.error).toBeNull();
+    const result = await store.dispatch(
+      ticketApi.endpoints.getTickets.initiate()
+    );
+
+    expect(result.data).toEqual(mockTickets);
+    expect(
+      ticketApi.endpoints.getTickets.select()(store.getState()).data
+    ).toEqual(mockTickets);
   });
 
-  it("handles a 400 bad request", async () => {
-    server.use(
-      http.get("http://localhost:3001/tickets", () =>
-        HttpResponse.json({ message: "Bad request" }, { status: 400 })
-      )
-    );
+  it.each([400, 401, 403, 404, 500])(
+    "handles HTTP %s responses",
+    async (status) => {
+      server.use(
+        http.get("http://localhost:3001/tickets", () =>
+          HttpResponse.json(
+            { message: "Request failed" },
+            { status }
+          )
+        )
+      );
 
-    const store = createStore();
-    const result = await store.dispatch(fetchTickets());
+      const store = createStore();
 
-    expect(fetchTickets.rejected.match(result)).toBe(true);
-    expect(result.payload).toBe(
-      "Bad request. Please check the submitted information."
-    );
-    expect(store.getState().tickets.loading).toBe(false);
-    expect(store.getState().tickets.error).toBe(
-      "Bad request. Please check the submitted information."
-    );
-  });
+      const result = await store.dispatch(
+        ticketApi.endpoints.getTickets.initiate()
+      );
 
-  it("handles a 401 unauthorized response", async () => {
-    server.use(
-      http.get("http://localhost:3001/tickets", () =>
-        HttpResponse.json({ message: "Unauthorized" }, { status: 401 })
-      )
-    );
+      expect(result.error).toBeDefined();
 
-    const store = createStore();
-    const result = await store.dispatch(fetchTickets());
-
-    expect(fetchTickets.rejected.match(result)).toBe(true);
-    expect(result.payload).toBe("Unauthorized. Please log in again.");
-    expect(store.getState().tickets.loading).toBe(false);
-    expect(store.getState().tickets.error).toBe(
-      "Unauthorized. Please log in again."
-    );
-  });
-
-  it("handles a 403 forbidden response", async () => {
-    server.use(
-      http.get("http://localhost:3001/tickets", () =>
-        HttpResponse.json({ message: "Forbidden" }, { status: 403 })
-      )
-    );
-
-    const store = createStore();
-    const result = await store.dispatch(fetchTickets());
-
-    expect(fetchTickets.rejected.match(result)).toBe(true);
-    expect(result.payload).toBe(
-      "You do not have permission to perform this action."
-    );
-    expect(store.getState().tickets.loading).toBe(false);
-    expect(store.getState().tickets.error).toBe(
-      "You do not have permission to perform this action."
-    );
-  });
-
-  it("handles a 404 response", async () => {
-    server.use(
-      http.get("http://localhost:3001/tickets", () =>
-        HttpResponse.json({ message: "Not found" }, { status: 404 })
-      )
-    );
-
-    const store = createStore();
-    const result = await store.dispatch(fetchTickets());
-
-    expect(fetchTickets.rejected.match(result)).toBe(true);
-    expect(result.payload).toBe("The requested resource was not found.");
-    expect(store.getState().tickets.loading).toBe(false);
-    expect(store.getState().tickets.error).toBe(
-      "The requested resource was not found."
-    );
-  });
-
-  it("handles a 500 server error", async () => {
-    server.use(
-      http.get("http://localhost:3001/tickets", () =>
-        HttpResponse.json({ message: "Server error" }, { status: 500 })
-      )
-    );
-
-    const store = createStore();
-    const result = await store.dispatch(fetchTickets());
-
-    expect(fetchTickets.rejected.match(result)).toBe(true);
-    expect(result.payload).toBe(
-      "Internal server error. Please try again later."
-    );
-    expect(store.getState().tickets.loading).toBe(false);
-    expect(store.getState().tickets.error).toBe(
-      "Internal server error. Please try again later."
-    );
-  });
+      if (result.error && "status" in result.error) {
+        expect(result.error.status).toBe(status);
+      }
+    }
+  );
 
   it("creates a ticket successfully", async () => {
     server.use(
@@ -142,14 +77,16 @@ describe("ticket API integration", () => {
     );
 
     const store = createStore();
-    const result = await store.dispatch(createTicket(ticketFormData));
 
-    expect(createTicket.fulfilled.match(result)).toBe(true);
+    const result = await store.dispatch(
+      ticketApi.endpoints.createTicket.initiate(ticketFormData)
+    );
 
-    if (createTicket.fulfilled.match(result)) {
-      expect(result.payload).toMatchObject(ticketFormData);
-      expect(result.payload.id).toMatch(/^TKT-/);
-      expect(result.payload.createdAt).toBeTruthy();
+    expect(result.data).toMatchObject(ticketFormData);
+
+    if (result.data) {
+      expect(result.data.id).toMatch(/^TKT-/);
+      expect(result.data.createdAt).toBeTruthy();
     }
   });
 
@@ -170,19 +107,16 @@ describe("ticket API integration", () => {
     );
 
     const store = createStore();
+
     const result = await store.dispatch(
-      updateTicket({
+      ticketApi.endpoints.updateTicket.initiate({
         id: "TKT-101",
         data: { ...ticketFormData, status: "In Progress" }
       })
     );
 
-    expect(updateTicket.fulfilled.match(result)).toBe(true);
-
-    if (updateTicket.fulfilled.match(result)) {
-      expect(result.payload.id).toBe("TKT-101");
-      expect(result.payload.status).toBe("In Progress");
-    }
+    expect(result.data?.id).toBe("TKT-101");
+    expect(result.data?.status).toBe("In Progress");
   });
 
   it("deletes a ticket successfully", async () => {
@@ -193,12 +127,12 @@ describe("ticket API integration", () => {
     );
 
     const store = createStore();
-    const result = await store.dispatch(deleteTicket("TKT-101"));
 
-    expect(deleteTicket.fulfilled.match(result)).toBe(true);
+    const result = await store.dispatch(
+      ticketApi.endpoints.deleteTicket.initiate("TKT-101")
+    );
 
-    if (deleteTicket.fulfilled.match(result)) {
-      expect(result.payload).toBe("TKT-101");
-    }
+    expect(result.data).toBeNull();
+    expect(result.error).toBeUndefined();
   });
 });

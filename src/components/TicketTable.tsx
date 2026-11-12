@@ -1,4 +1,11 @@
 import { useState } from "react";
+import { useAppDispatch } from "../hooks/useAppDispatch";
+import { useAppSelector } from "../hooks/useAppSelector";
+import {
+  toggleTicketSelection,
+  toggleTicketsSelection,
+  clearSelectedTickets
+} from "../features/tickets/ticketSlice";
 import type {
   Ticket,
   TicketFormData,
@@ -9,6 +16,7 @@ import { authService } from "../services/authService";
 
 interface TicketTableProps {
   tickets: Ticket[];
+  allTickets: Ticket[];
   onEdit: (ticket: Ticket) => void;
   onDelete: (ticket: Ticket, skipConfirmation?: boolean) => void;
   onUpdate: (id: string, data: TicketFormData) => Promise<Ticket>;
@@ -23,10 +31,17 @@ const ticketStatuses: TicketStatus[] = [
 
 export default function TicketTable({
   tickets,
+  allTickets,
   onEdit,
   onDelete,
   onUpdate
 }: TicketTableProps) {
+  const dispatch = useAppDispatch();
+
+  const selectedIds = useAppSelector(
+    (state) => state.tickets.selectedTicketIds
+  );
+
   const {
     canEditTicket,
     canDeleteTicket,
@@ -35,12 +50,13 @@ export default function TicketTable({
   } = usePermissions();
 
   const agents = authService.getSupportAgents();
+
   const [updatingTicketId, setUpdatingTicketId] = useState<string | null>(null);
   const [assigningTicketId, setAssigningTicketId] = useState<string | null>(null);
   const [statusError, setStatusError] = useState("");
   const [assignmentError, setAssignmentError] = useState("");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<TicketStatus>("Open");
+  const [bulkAssignedTo, setBulkAssignedTo] = useState("");
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [bulkError, setBulkError] = useState("");
 
@@ -50,36 +66,29 @@ export default function TicketTable({
     canUpdateTicketStatus ||
     canAssignTickets;
 
-  const canUseBulkActions = canDeleteTicket || canUpdateTicketStatus;
+  const canUseBulkActions =
+    canDeleteTicket || canUpdateTicketStatus || canAssignTickets;
+
   const selectableTickets = canUseBulkActions ? tickets : [];
+
   const allSelected =
     selectableTickets.length > 0 &&
     selectableTickets.every((ticket) => selectedIds.includes(ticket.id));
 
+  const selectedTickets = allTickets.filter((ticket) =>
+    selectedIds.includes(ticket.id)
+  );
+
   const toggleTicket = (ticketId: string) => {
-    setSelectedIds((current) =>
-      current.includes(ticketId)
-        ? current.filter((id) => id !== ticketId)
-        : [...current, ticketId]
-    );
+    dispatch(toggleTicketSelection(ticketId));
   };
 
   const toggleAll = () => {
-    if (allSelected) {
-      setSelectedIds((current) =>
-        current.filter(
-          (id) => !selectableTickets.some((ticket) => ticket.id === id)
-        )
-      );
-      return;
-    }
-
-    setSelectedIds((current) => [
-      ...new Set([
-        ...current,
-        ...selectableTickets.map((ticket) => ticket.id)
-      ])
-    ]);
+    dispatch(
+      toggleTicketsSelection(
+        selectableTickets.map((ticket) => ticket.id)
+      )
+    );
   };
 
   const handleStatusChange = async (
@@ -113,10 +122,6 @@ export default function TicketTable({
   };
 
   const handleBulkStatusUpdate = async () => {
-    const selectedTickets = tickets.filter((ticket) =>
-      selectedIds.includes(ticket.id)
-    );
-
     if (selectedTickets.length === 0) return;
 
     try {
@@ -124,10 +129,13 @@ export default function TicketTable({
       setBulkUpdating(true);
 
       for (const ticket of selectedTickets) {
-        await onUpdate(ticket.id, { ...ticket, status: bulkStatus });
+        await onUpdate(ticket.id, {
+          ...ticket,
+          status: bulkStatus
+        });
       }
 
-      setSelectedIds([]);
+      dispatch(clearSelectedTickets());
     } catch {
       setBulkError("Some tickets could not be updated. Please try again.");
     } finally {
@@ -135,11 +143,30 @@ export default function TicketTable({
     }
   };
 
-  const handleBulkDelete = () => {
-    const selectedTickets = tickets.filter((ticket) =>
-      selectedIds.includes(ticket.id)
-    );
+  const handleBulkAssignment = async () => {
+    if (selectedTickets.length === 0 || !bulkAssignedTo) return;
 
+    try {
+      setBulkError("");
+      setBulkUpdating(true);
+
+      for (const ticket of selectedTickets) {
+        await onUpdate(ticket.id, {
+          ...ticket,
+          assignedTo: bulkAssignedTo
+        });
+      }
+
+      dispatch(clearSelectedTickets());
+      setBulkAssignedTo("");
+    } catch {
+      setBulkError("Some tickets could not be assigned. Please try again.");
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
     if (selectedTickets.length === 0) return;
 
     const confirmed = window.confirm(
@@ -148,8 +175,20 @@ export default function TicketTable({
 
     if (!confirmed) return;
 
-    selectedTickets.forEach((ticket) => onDelete(ticket, true));
-    setSelectedIds([]);
+    try {
+      setBulkError("");
+      setBulkUpdating(true);
+
+      for (const ticket of selectedTickets) {
+        await onDelete(ticket, true);
+      }
+
+      dispatch(clearSelectedTickets());
+    } catch {
+      setBulkError("Some tickets could not be deleted. Please try again.");
+    } finally {
+      setBulkUpdating(false);
+    }
   };
 
   return (
@@ -167,9 +206,9 @@ export default function TicketTable({
       )}
 
       {canUseBulkActions && selectedIds.length > 0 && (
-        <div className="flex flex-col gap-3 border-b border-slate-200 bg-violet-50 px-5 py-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 border-b border-slate-200 bg-violet-50 px-5 py-4 sm:flex-row sm:items-center sm:flex-wrap">
           <span className="text-xs font-semibold text-violet-800">
-            {selectedIds.length} selected
+            {selectedTickets.length} selected
           </span>
 
           {canUpdateTicketStatus && (
@@ -180,6 +219,7 @@ export default function TicketTable({
                   setBulkStatus(event.target.value as TicketStatus)
                 }
                 aria-label="Bulk status"
+                disabled={bulkUpdating}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
               >
                 {ticketStatuses.map((status) => (
@@ -192,10 +232,42 @@ export default function TicketTable({
               <button
                 type="button"
                 onClick={() => void handleBulkStatusUpdate()}
-                disabled={bulkUpdating}
+                disabled={bulkUpdating || selectedTickets.length === 0}
                 className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
               >
-                {bulkUpdating ? "Updating..." : "Update status"}
+                {bulkUpdating ? "Processing..." : "Update status"}
+              </button>
+            </div>
+          )}
+
+          {canAssignTickets && (
+            <div className="flex items-center gap-2">
+              <select
+                value={bulkAssignedTo}
+                onChange={(event) => setBulkAssignedTo(event.target.value)}
+                aria-label="Bulk assign agent"
+                disabled={bulkUpdating}
+                className="max-w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
+              >
+                <option value="">Select support agent</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => void handleBulkAssignment()}
+                disabled={
+                  bulkUpdating ||
+                  !bulkAssignedTo ||
+                  selectedTickets.length === 0
+                }
+                className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {bulkUpdating ? "Processing..." : "Assign tickets"}
               </button>
             </div>
           )}
@@ -203,8 +275,8 @@ export default function TicketTable({
           {canDeleteTicket && (
             <button
               type="button"
-              onClick={handleBulkDelete}
-              disabled={bulkUpdating}
+              onClick={() => void handleBulkDelete()}
+              disabled={bulkUpdating || selectedTickets.length === 0}
               className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
             >
               Delete selected
@@ -213,14 +285,15 @@ export default function TicketTable({
 
           <button
             type="button"
-            onClick={() => setSelectedIds([])}
-            className="text-xs text-slate-500 hover:text-slate-800 sm:ml-auto"
+            onClick={() => dispatch(clearSelectedTickets())}
+            disabled={bulkUpdating}
+            className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-50 sm:ml-auto"
           >
             Clear selection
           </button>
 
           {bulkError && (
-            <p className="text-xs text-rose-600" role="alert">
+            <p className="w-full text-xs text-rose-600" role="alert">
               {bulkError}
             </p>
           )}
@@ -241,26 +314,33 @@ export default function TicketTable({
                 />
               </th>
             )}
+
             <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Ticket
             </th>
+
             <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Customer
             </th>
+
             <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Priority
             </th>
+
             <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Status
             </th>
+
             {canAssignTickets && (
               <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 Assigned Agent
               </th>
             )}
+
             <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Created
             </th>
+
             {showActions && (
               <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 Actions
