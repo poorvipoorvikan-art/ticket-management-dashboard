@@ -58,10 +58,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
   }, []);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      if (sessionStorage.getItem(STORAGE_KEY)) {
+        logout();
+      }
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, [logout]);
+
   const value = useMemo(
     () => ({ user, loading, login, logout }),
     [user, loading, login, logout]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }

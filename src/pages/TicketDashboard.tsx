@@ -25,6 +25,7 @@ export default function TicketDashboard() {
   const {
     tickets,
     loading,
+    isFetching,
     error,
     refetch,
     createTicket,
@@ -44,6 +45,15 @@ export default function TicketDashboard() {
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [greeting, setGreeting] = useState(getGreeting);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    if (!successMessage) return;
+
+    const timeout = setTimeout(() => setSuccessMessage(""), 3000);
+
+    return () => clearTimeout(timeout);
+  }, [successMessage]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -86,8 +96,10 @@ export default function TicketDashboard() {
 
       if (selectedTicket) {
         await updateTicket(selectedTicket.id, data);
+        setSuccessMessage("Ticket updated successfully.");
       } else {
         await createTicket(data);
+        setSuccessMessage("Ticket created successfully.");
       }
 
       setShowForm(false);
@@ -113,6 +125,7 @@ export default function TicketDashboard() {
     try {
       setActionError("");
       await deleteTicket(ticket.id);
+      setSuccessMessage("Ticket deleted successfully.");
     } catch {
       setActionError("Unable to delete ticket. Please try again.");
       throw new Error("Ticket deletion failed");
@@ -343,6 +356,27 @@ export default function TicketDashboard() {
         </div>
       </aside>
 
+      {successMessage && (
+        <div
+          className="fixed right-5 top-20 z-[60] flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-5 py-4 text-sm font-medium text-emerald-700 shadow-xl"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="grid size-6 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+            ✓
+          </span>
+          {successMessage}
+          <button
+            type="button"
+            onClick={() => setSuccessMessage("")}
+            aria-label="Dismiss notification"
+            className="ml-2 text-lg text-slate-400 transition hover:text-slate-700"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <main className="min-h-screen md:ml-[260px]">
         <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-5 backdrop-blur-xl sm:px-8">
           <div className="flex items-center gap-3">
@@ -531,10 +565,11 @@ export default function TicketDashboard() {
               <button
                 type="button"
                 onClick={() => void refetch()}
-                className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 lg:self-auto"
+                disabled={isFetching}
+                className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 lg:self-auto"
               >
-                <span className="text-base">↻</span>
-                Refresh
+                <span className={isFetching ? "animate-spin text-base" : "text-base"}>↻</span>
+                {isFetching && !loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
 
@@ -593,6 +628,12 @@ export default function TicketDashboard() {
               >
                 <div className="mx-auto mb-3 size-8 animate-spin rounded-full border-2 border-indigo-100 border-t-indigo-600" />
                 Loading tickets...
+              </div>
+            )}
+
+            {!loading && isFetching && !error && (
+              <div className="border-b border-indigo-100 bg-indigo-50/60 px-5 py-2 text-xs font-medium text-indigo-600 sm:px-6" role="status">
+                Updating ticket information...
               </div>
             )}
 

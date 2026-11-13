@@ -1,12 +1,10 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi } from "@reduxjs/toolkit/query/react";
 import type { Ticket, TicketFormData } from "../../types/ticket.types";
+import { baseQuery } from "../../services/baseQuery";
 
 export const ticketApi = createApi({
   reducerPath: "ticketApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL,
-    timeout: 10000
-  }),
+  baseQuery,
   tagTypes: ["Ticket"],
   endpoints: (builder) => ({
     getTickets: builder.query<Ticket[], void>({

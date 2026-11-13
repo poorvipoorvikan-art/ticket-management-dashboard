@@ -38,6 +38,7 @@ describe("ticket API integration", () => {
     );
 
     expect(result.data).toEqual(mockTickets);
+
     expect(
       ticketApi.endpoints.getTickets.select()(store.getState()).data
     ).toEqual(mockTickets);
@@ -71,9 +72,9 @@ describe("ticket API integration", () => {
 
   it("creates a ticket successfully", async () => {
     server.use(
-      http.post("http://localhost:3001/tickets", async ({ request }) => {
-        return HttpResponse.json(await request.json(), { status: 201 });
-      })
+      http.post("http://localhost:3001/tickets", async ({ request }) =>
+        HttpResponse.json(await request.json(), { status: 201 })
+      )
     );
 
     const store = createStore();
@@ -88,6 +89,31 @@ describe("ticket API integration", () => {
       expect(result.data.id).toMatch(/^TKT-/);
       expect(result.data.createdAt).toBeTruthy();
     }
+  });
+
+  it("handles ticket creation failure", async () => {
+    server.use(
+      http.post("http://localhost:3001/tickets", () =>
+        HttpResponse.json(
+          { message: "Creation failed" },
+          { status: 500 }
+        )
+      )
+    );
+
+    const store = createStore();
+
+    const result = await store.dispatch(
+      ticketApi.endpoints.createTicket.initiate(ticketFormData)
+    );
+
+    expect(result.error).toMatchObject({
+      type: "server",
+      status: 500,
+      message: "Internal server error. Please try again later."
+    });
+
+    expect(result.data).toBeUndefined();
   });
 
   it("updates a ticket successfully", async () => {
@@ -119,6 +145,53 @@ describe("ticket API integration", () => {
     expect(result.data?.status).toBe("In Progress");
   });
 
+  it("handles ticket update failure and rolls back optimistic updates", async () => {
+    const store = createStore();
+
+    await store.dispatch(
+      ticketApi.endpoints.getTickets.initiate()
+    ).unwrap();
+
+    const originalTickets =
+      ticketApi.endpoints.getTickets.select()(store.getState()).data;
+
+    const originalTicket = originalTickets?.find(
+      (ticket) => ticket.id === "TKT-101"
+    );
+
+    expect(originalTicket).toBeDefined();
+
+    server.use(
+      http.patch("http://localhost:3001/tickets/TKT-101", () =>
+        HttpResponse.json(
+          { message: "Update failed" },
+          { status: 500 }
+        )
+      )
+    );
+
+    const result = await store.dispatch(
+      ticketApi.endpoints.updateTicket.initiate({
+        id: "TKT-101",
+        data: { ...ticketFormData, status: "Resolved" }
+      })
+    );
+
+    expect(result.error).toMatchObject({
+      type: "server",
+      status: 500
+    });
+
+    const updatedTickets =
+      ticketApi.endpoints.getTickets.select()(store.getState()).data;
+
+    const updatedTicket = updatedTickets?.find(
+      (ticket) => ticket.id === "TKT-101"
+    );
+
+    expect(updatedTicket).toEqual(originalTicket);
+  });
+
   it("deletes a ticket successfully", async () => {
     server.use(
       http.delete("http://localhost:3001/tickets/TKT-101", () =>
@@ -134,5 +207,38 @@ describe("ticket API integration", () => {
 
     expect(result.data).toBeNull();
     expect(result.error).toBeUndefined();
+  });
+
+  it("handles ticket deletion failure without losing existing tickets", async () => {
+    const store = createStore();
+
+    await store.dispatch(
+      ticketApi.endpoints.getTickets.initiate()
+    ).unwrap();
+
+    server.use(
+      http.delete("http://localhost:3001/tickets/TKT-101", () =>
+        HttpResponse.json(
+          { message: "Deletion failed" },
+          { status: 500 }
+        )
+      )
+    );
+
+    const result = await store.dispatch(
+      ticketApi.endpoints.deleteTicket.initiate("TKT-101")
+    );
+
+    expect(result.error).toMatchObject({
+      type: "server",
+      status: 500
+    });
+
+    const tickets =
+      ticketApi.endpoints.getTickets.select()(store.getState()).data;
+
+    expect(
+      tickets?.some((ticket) => ticket.id === "TKT-101")
+    ).toBe(true);
   });
 });

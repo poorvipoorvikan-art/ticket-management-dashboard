@@ -4,24 +4,25 @@ import {
   useUpdateTicketMutation,
   useDeleteTicketMutation
 } from "../features/tickets/ticketApi";
-import type { Ticket, TicketFormData } from "../types/ticket.types";
+import type {
+  Ticket,
+  TicketFormData
+} from "../types/ticket.types";
 
 function getErrorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null) {
-    if ("data" in error && typeof error.data === "string") {
-      return error.data;
-    }
-
-    if ("error" in error && typeof error.error === "string") {
-      return error.error;
-    }
-
     if ("message" in error && typeof error.message === "string") {
       return error.message;
     }
+
+    if ("data" in error && typeof error.data === "object" && error.data !== null) {
+      if ("message" in error.data && typeof error.data.message === "string") {
+        return error.data.message;
+      }
+    }
   }
 
-  return "An unexpected error occurred.";
+  return "Something went wrong. Please try again.";
 }
 
 export function useTickets() {
@@ -33,11 +34,18 @@ export function useTickets() {
     refetch
   } = useGetTicketsQuery();
 
-  const [createMutation] = useCreateTicketMutation();
-  const [updateMutation] = useUpdateTicketMutation();
-  const [deleteMutation] = useDeleteTicketMutation();
+  const [createMutation, { isLoading: isCreating }] =
+    useCreateTicketMutation();
 
-  const createTicket = async (data: TicketFormData): Promise<Ticket> => {
+  const [updateMutation, { isLoading: isUpdating }] =
+    useUpdateTicketMutation();
+
+  const [deleteMutation, { isLoading: isDeleting }] =
+    useDeleteTicketMutation();
+
+  const createTicket = async (
+    data: TicketFormData
+  ): Promise<Ticket> => {
     return createMutation(data).unwrap();
   };
 
@@ -54,11 +62,15 @@ export function useTickets() {
 
   return {
     tickets,
-    loading: isLoading || isFetching,
+    loading: isLoading,
+    isFetching,
     error: error ? getErrorMessage(error) : "",
     refetch,
     createTicket,
     updateTicket,
-    deleteTicket
+    deleteTicket,
+    isCreating,
+    isUpdating,
+    isDeleting
   };
 }
