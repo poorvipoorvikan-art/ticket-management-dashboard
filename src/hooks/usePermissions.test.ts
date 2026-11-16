@@ -25,10 +25,12 @@ describe("usePermissions", () => {
     const { result } = renderHook(() => usePermissions());
 
     expect(result.current).toEqual({
+      canViewTickets: false,
       canViewAllTickets: false,
       canCreateTicket: false,
       canDeleteTicket: false,
       canAssignTickets: false,
+      canManageUsers: false,
       canManagePriority: false,
       canUpdateTicketStatus: false,
       canEditTicket: false
@@ -53,10 +55,12 @@ describe("usePermissions", () => {
     const { result } = renderHook(() => usePermissions());
 
     expect(result.current).toEqual({
+      canViewTickets: true,
       canViewAllTickets: true,
-      canCreateTicket: false,
+      canCreateTicket: true,
       canDeleteTicket: false,
       canAssignTickets: true,
+      canManageUsers: false,
       canManagePriority: true,
       canUpdateTicketStatus: true,
       canEditTicket: true
@@ -71,10 +75,12 @@ describe("usePermissions", () => {
     const { result } = renderHook(() => usePermissions());
 
     expect(result.current).toEqual({
+      canViewTickets: true,
       canViewAllTickets: false,
-      canCreateTicket: false,
+      canCreateTicket: true,
       canDeleteTicket: false,
       canAssignTickets: false,
+      canManageUsers: false,
       canManagePriority: false,
       canUpdateTicketStatus: true,
       canEditTicket: false

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  canViewTickets,
   canViewAllTickets,
   canCreateTicket,
   canDeleteTicket,
   canAssignTickets,
+  canManageUsers,
   canManagePriority,
   canUpdateTicketStatus,
   canEditTicket
@@ -17,21 +19,32 @@ const roles: UserRole[] = [
 ];
 
 describe("ticket permissions", () => {
-  it("allows only Administrator to create and delete tickets", () => {
+  it("allows all three roles to view tickets", () => {
     roles.forEach((role) => {
-      const expected = role === "Administrator";
-
-      expect(canCreateTicket(role)).toBe(expected);
-      expect(canDeleteTicket(role)).toBe(expected);
+      expect(canViewTickets(role)).toBe(true);
     });
   });
 
-  it("allows Administrator and Support Manager to view all tickets", () => {
+  it("allows only Administrator and Support Manager to view all tickets", () => {
     roles.forEach((role) => {
       const expected =
         role === "Administrator" || role === "Support Manager";
 
       expect(canViewAllTickets(role)).toBe(expected);
+    });
+  });
+
+  it("allows all three roles to create tickets", () => {
+    roles.forEach((role) => {
+      expect(canCreateTicket(role)).toBe(true);
+    });
+  });
+
+  it("allows only Administrator to delete tickets", () => {
+    roles.forEach((role) => {
+      expect(canDeleteTicket(role)).toBe(
+        role === "Administrator"
+      );
     });
   });
 
@@ -41,6 +54,14 @@ describe("ticket permissions", () => {
         role === "Administrator" || role === "Support Manager";
 
       expect(canAssignTickets(role)).toBe(expected);
+    });
+  });
+
+  it("allows only Administrator to manage users", () => {
+    roles.forEach((role) => {
+      expect(canManageUsers(role)).toBe(
+        role === "Administrator"
+      );
     });
   });
 

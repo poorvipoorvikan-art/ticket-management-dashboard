@@ -11,6 +11,34 @@ type SortOption = "newest" | "oldest" | "priority";
 
 const PAGE_SIZE = 5;
 
+function getActionErrorMessage(error: unknown, action: string): string {
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const status = error.status;
+
+    if (status === 401) {
+      return "Your session has expired. Please sign in again.";
+    }
+
+    if (status === 403) {
+      return `You do not have permission to ${action}.`;
+    }
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof error.data === "object" &&
+    error.data !== null &&
+    "message" in error.data &&
+    typeof error.data.message === "string"
+  ) {
+    return error.data.message;
+  }
+
+  return `Unable to ${action}. Please try again.`;
+}
+
 const getGreeting = () => {
   const hour = new Date().getHours();
 
@@ -35,7 +63,12 @@ export default function TicketDashboard() {
 
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { canViewAllTickets } = usePermissions();
+  const {
+    canViewAllTickets,
+    canCreateTicket,
+    canEditTicket,
+    canDeleteTicket
+  } = usePermissions();
 
   const [showForm, setShowForm] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -73,12 +106,22 @@ export default function TicketDashboard() {
     : tickets.filter((ticket) => ticket.assignedTo === user?.id);
 
   const openCreateForm = () => {
+    if (!canCreateTicket) {
+      setActionError("You do not have permission to create tickets.");
+      return;
+    }
+
     setSelectedTicket(null);
     setActionError("");
     setShowForm(true);
   };
 
   const openEditForm = (ticket: Ticket) => {
+    if (!canEditTicket) {
+      setActionError("You do not have permission to edit tickets.");
+      return;
+    }
+
     setSelectedTicket(ticket);
     setActionError("");
     setShowForm(true);
@@ -91,6 +134,16 @@ export default function TicketDashboard() {
   };
 
   const handleSubmit = async (data: TicketFormData) => {
+    if (selectedTicket && !canEditTicket) {
+      setActionError("You do not have permission to edit tickets.");
+      throw new Error("You do not have permission to edit tickets.");
+    }
+
+    if (!selectedTicket && !canCreateTicket) {
+      setActionError("You do not have permission to create tickets.");
+      throw new Error("You do not have permission to create tickets.");
+    }
+
     try {
       setActionError("");
 
@@ -104,9 +157,21 @@ export default function TicketDashboard() {
 
       setShowForm(false);
       setSelectedTicket(null);
-    } catch {
-      setActionError("Unable to save ticket. Please try again.");
-      throw new Error("Ticket save failed");
+    } catch (error) {
+      const message = getActionErrorMessage(error, "save this ticket");
+      setActionError(message);
+
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        error.status === 401
+      ) {
+        logout();
+        navigate("/login", { replace: true });
+      }
+
+      throw error;
     }
   };
 
@@ -114,6 +179,12 @@ export default function TicketDashboard() {
     ticket: Ticket,
     skipConfirmation = false
   ): Promise<void> => {
+    if (!canDeleteTicket) {
+      const message = "You do not have permission to delete tickets.";
+      setActionError(message);
+      throw new Error(message);
+    }
+
     if (!skipConfirmation) {
       const confirmed = window.confirm(
         `Are you sure you want to delete "${ticket.subject}"?`
@@ -126,9 +197,21 @@ export default function TicketDashboard() {
       setActionError("");
       await deleteTicket(ticket.id);
       setSuccessMessage("Ticket deleted successfully.");
-    } catch {
-      setActionError("Unable to delete ticket. Please try again.");
-      throw new Error("Ticket deletion failed");
+    } catch (error) {
+      const message = getActionErrorMessage(error, "delete this ticket");
+      setActionError(message);
+
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        error.status === 401
+      ) {
+        logout();
+        navigate("/login", { replace: true });
+      }
+
+      throw error;
     }
   };
 
@@ -485,7 +568,7 @@ export default function TicketDashboard() {
               </p>
             </div>
 
-            {user?.role === "Administrator" && (
+            {canCreateTicket && (
               <button
                 type="button"
                 onClick={openCreateForm}

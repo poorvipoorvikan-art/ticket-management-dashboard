@@ -18,7 +18,7 @@ interface TicketTableProps {
   tickets: Ticket[];
   allTickets: Ticket[];
   onEdit: (ticket: Ticket) => void;
-  onDelete: (ticket: Ticket, skipConfirmation?: boolean) => void;
+  onDelete: (ticket: Ticket, skipConfirmation?: boolean) => Promise<void>;
   onUpdate: (id: string, data: TicketFormData) => Promise<Ticket>;
 }
 
@@ -91,10 +91,36 @@ export default function TicketTable({
     );
   };
 
+  const handleEdit = (ticket: Ticket) => {
+    if (!canEditTicket) {
+      setBulkError("You do not have permission to edit tickets.");
+      return;
+    }
+
+    onEdit(ticket);
+  };
+
+  const handleDelete = async (
+    ticket: Ticket,
+    skipConfirmation = false
+  ) => {
+    if (!canDeleteTicket) {
+      setBulkError("You do not have permission to delete tickets.");
+      return;
+    }
+
+    await onDelete(ticket, skipConfirmation);
+  };
+
   const handleStatusChange = async (
     ticket: Ticket,
     status: TicketStatus
   ) => {
+    if (!canUpdateTicketStatus) {
+      setStatusError("You do not have permission to update ticket status.");
+      return;
+    }
+
     try {
       setStatusError("");
       setUpdatingTicketId(ticket.id);
@@ -110,6 +136,11 @@ export default function TicketTable({
     ticket: Ticket,
     assignedTo: string
   ) => {
+    if (!canAssignTickets) {
+      setAssignmentError("You do not have permission to assign tickets.");
+      return;
+    }
+
     try {
       setAssignmentError("");
       setAssigningTicketId(ticket.id);
@@ -122,6 +153,11 @@ export default function TicketTable({
   };
 
   const handleBulkStatusUpdate = async () => {
+    if (!canUpdateTicketStatus) {
+      setBulkError("You do not have permission to update ticket status.");
+      return;
+    }
+
     if (selectedTickets.length === 0) return;
 
     try {
@@ -144,6 +180,11 @@ export default function TicketTable({
   };
 
   const handleBulkAssignment = async () => {
+    if (!canAssignTickets) {
+      setBulkError("You do not have permission to assign tickets.");
+      return;
+    }
+
     if (selectedTickets.length === 0 || !bulkAssignedTo) return;
 
     try {
@@ -167,6 +208,11 @@ export default function TicketTable({
   };
 
   const handleBulkDelete = async () => {
+    if (!canDeleteTicket) {
+      setBulkError("You do not have permission to delete tickets.");
+      return;
+    }
+
     if (selectedTickets.length === 0) return;
 
     const confirmed = window.confirm(
@@ -180,7 +226,7 @@ export default function TicketTable({
       setBulkUpdating(true);
 
       for (const ticket of selectedTickets) {
-        await onDelete(ticket, true);
+        await handleDelete(ticket, true);
       }
 
       dispatch(clearSelectedTickets());
@@ -464,7 +510,7 @@ export default function TicketTable({
                     {canEditTicket && (
                       <button
                         type="button"
-                        onClick={() => onEdit(ticket)}
+                        onClick={() => handleEdit(ticket)}
                         className="text-xs font-medium text-violet-700 hover:text-violet-900"
                       >
                         Edit
@@ -474,7 +520,7 @@ export default function TicketTable({
                     {canDeleteTicket && (
                       <button
                         type="button"
-                        onClick={() => onDelete(ticket)}
+                        onClick={() => void handleDelete(ticket)}
                         className="text-xs font-medium text-rose-600 hover:text-rose-800"
                       >
                         Delete

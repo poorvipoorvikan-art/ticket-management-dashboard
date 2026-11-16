@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ticketApi } from "./ticketApi";
 import { mockTickets } from "../../test/mocks/handlers";
 import { server } from "../../test/mocks/server";
@@ -192,6 +192,90 @@ describe("ticket API integration", () => {
     expect(updatedTicket).toEqual(originalTicket);
   });
 
+  it("dispatches an unauthorized event when ticket update returns 401", async () => {
+    const unauthorizedHandler = vi.fn();
+
+    window.addEventListener(
+      "auth:unauthorized",
+      unauthorizedHandler
+    );
+
+    try {
+      server.use(
+        http.patch("http://localhost:3001/tickets/TKT-101", () =>
+          HttpResponse.json(
+            { message: "Unauthorized" },
+            { status: 401 }
+          )
+        )
+      );
+
+      const store = createStore();
+
+      const result = await store.dispatch(
+        ticketApi.endpoints.updateTicket.initiate({
+          id: "TKT-101",
+          data: { ...ticketFormData, status: "Resolved" }
+        })
+      );
+
+      expect(result.error).toMatchObject({
+        type: "client",
+        status: 401,
+        message: "Your session has expired. Please log in again."
+      });
+
+      expect(unauthorizedHandler).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener(
+        "auth:unauthorized",
+        unauthorizedHandler
+      );
+    }
+  });
+
+  it("returns a permission error when ticket update returns 403", async () => {
+    const unauthorizedHandler = vi.fn();
+
+    window.addEventListener(
+      "auth:unauthorized",
+      unauthorizedHandler
+    );
+
+    try {
+      server.use(
+        http.patch("http://localhost:3001/tickets/TKT-101", () =>
+          HttpResponse.json(
+            { message: "Forbidden" },
+            { status: 403 }
+          )
+        )
+      );
+
+      const store = createStore();
+
+      const result = await store.dispatch(
+        ticketApi.endpoints.updateTicket.initiate({
+          id: "TKT-101",
+          data: { ...ticketFormData, assignedTo: "agent-2" }
+        })
+      );
+
+      expect(result.error).toMatchObject({
+        type: "client",
+        status: 403,
+        message: "You do not have permission to perform this action."
+      });
+
+      expect(unauthorizedHandler).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener(
+        "auth:unauthorized",
+        unauthorizedHandler
+      );
+    }
+  });
+
   it("deletes a ticket successfully", async () => {
     server.use(
       http.delete("http://localhost:3001/tickets/TKT-101", () =>
@@ -240,5 +324,28 @@ describe("ticket API integration", () => {
     expect(
       tickets?.some((ticket) => ticket.id === "TKT-101")
     ).toBe(true);
+  });
+
+  it("prevents ticket deletion when the API returns 403", async () => {
+    server.use(
+      http.delete("http://localhost:3001/tickets/TKT-101", () =>
+        HttpResponse.json(
+          { message: "Forbidden" },
+          { status: 403 }
+        )
+      )
+    );
+
+    const store = createStore();
+
+    const result = await store.dispatch(
+      ticketApi.endpoints.deleteTicket.initiate("TKT-101")
+    );
+
+    expect(result.error).toMatchObject({
+      type: "client",
+      status: 403,
+      message: "You do not have permission to perform this action."
+    });
   });
 });
