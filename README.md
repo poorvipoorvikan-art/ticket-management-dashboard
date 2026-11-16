@@ -26,6 +26,7 @@ The application supports three roles:
 **Support Agent**
 - View assigned tickets only.
 - Create tickets.
+- Newly created tickets are automatically assigned to the logged-in agent.
 - Update ticket status.
 - Cannot edit, delete, or assign tickets.
 
@@ -48,6 +49,7 @@ Additional authentication features:
 - Update ticket status and priority.
 - View ticket details.
 - Restrict ticket operations according to user permissions.
+- Automatically assign tickets created by Support Agents to their own accounts.
 
 ### 3. Search, Filtering, and Sorting
 
@@ -58,7 +60,7 @@ Additional authentication features:
 - Sort ticket records.
 - Paginate ticket results.
 - Select individual tickets.
-- Select all tickets on the current page.
+- Select multiple tickets for bulk operations.
 
 ### 4. Bulk Operations
 
@@ -109,7 +111,7 @@ Retry conditions include:
 Retry configuration:
 - Maximum retries: 2
 - Initial delay: 500 ms
-- Exponential delay: 1000 ms
+- Second retry delay: 1000 ms
 
 POST, PATCH, and DELETE requests are not automatically retried to avoid duplicate operations.
 
@@ -143,7 +145,7 @@ A reusable permission-checking system controls frontend access to ticket operati
 
 | Feature | Administrator | Support Manager | Support Agent |
 |---|---|---|---|
-| View tickets | Yes | Yes | Assigned only |
+| View tickets | All | All | Assigned only |
 | Create tickets | Yes | Yes | Yes |
 | Edit tickets | Yes | Yes | No |
 | Assign tickets | Yes | Yes | No |
@@ -172,6 +174,7 @@ Permissions are checked in the UI and in the relevant dashboard operation handle
 - Support Agents can update ticket status.
 - Dashboard handlers independently check permissions before performing restricted actions.
 - HTTP 401 and 403 responses receive different handling.
+- Support Agents can create tickets that are automatically assigned to themselves.
 
 #### Form Validation and Input Security
 
@@ -272,25 +275,25 @@ ticket-management-dashboard/
 - npm
 - Git
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/poorvipoorvikan-art/ticket-management-dashboard.git
 ```
 
-### 2. Navigate to the project
+### 2. Navigate to the Project
 
 ```bash
 cd ticket-management-dashboard
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 4. Configure environment variables
+### 4. Configure Environment Variables
 
 Create a `.env` file in the project root.
 
@@ -302,13 +305,15 @@ The API URL should point to the running backend.
 
 Do not add secrets or private credentials to frontend environment variables.
 
-### 5. Start the backend
+### 5. Start the Backend
 
 ```bash
 npm run server
 ```
 
-### 6. Start the frontend
+### 6. Start the Frontend
+
+Open another terminal and run:
 
 ```bash
 npm run dev
@@ -318,7 +323,7 @@ The Vite development server will display the local application URL in the termin
 
 ## Available Scripts
 
-### Start frontend
+### Start Frontend
 
 ```bash
 npm run dev
@@ -326,7 +331,7 @@ npm run dev
 
 Starts the frontend development server.
 
-### Production build
+### Production Build
 
 ```bash
 npm run build
@@ -334,7 +339,7 @@ npm run build
 
 Runs TypeScript compilation and creates the production build.
 
-### Run tests
+### Run Tests
 
 ```bash
 npm run test:run
@@ -342,7 +347,7 @@ npm run test:run
 
 Runs the complete test suite.
 
-### Start backend
+### Start Backend
 
 ```bash
 npm run server
@@ -368,7 +373,7 @@ The application uses Vitest, React Testing Library, and Mock Service Worker.
 
 The test suite covers:
 
-**Reliability testing**
+**Reliability Testing**
 - Successful API requests.
 - HTTP 400, 401, 403, 404, and 500 responses.
 - Network failures.
@@ -380,7 +385,7 @@ The test suite covers:
 - Loading and error states.
 - Refetch functionality.
 
-**Security testing**
+**Security Testing**
 - Permission checks for all supported roles.
 - Protected route behavior.
 - Unauthenticated dashboard access.
@@ -418,11 +423,11 @@ npm run build
 
 ## Deployment
 
-**Frontend:** Vercel
+**Frontend – Vercel**
 
 https://ticket-management-dashboard-gamma.vercel.app
 
-**Backend:** Render
+**Backend – Render**
 
 https://ticket-management-dashboard.onrender.com
 
@@ -433,6 +438,8 @@ VITE_API_URL=https://ticket-management-dashboard.onrender.com
 ```
 
 Ensure the backend is running and accessible before using the deployed frontend.
+
+The Vercel project is connected to GitHub for deployment when changes are pushed to the connected branch.
 
 ## Authentication and Future Improvements
 

@@ -6,6 +6,7 @@ import {
   type FetchBaseQueryError
 } from "@reduxjs/toolkit/query/react";
 import type { ApiError } from "../types/api.types";
+import { recordApiRequest } from "../monitoring/apiMonitor";
 
 const baseUrl = import.meta.env.VITE_API_URL;
 
@@ -95,6 +96,11 @@ function normalizeApiError(error: FetchBaseQueryError): ApiError {
   };
 }
 
+const getTime = () =>
+  typeof performance !== "undefined"
+    ? performance.now()
+    : Date.now();
+
 export const baseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -107,7 +113,24 @@ export const baseQuery: BaseQueryFn<
       ? "GET"
       : (args.method ?? "GET").toUpperCase();
 
-  let result = await rawBaseQuery(args, api, extraOptions);
+  const endpoint = api.endpoint || "unknown";
+
+  const executeRequest = async () => {
+    const startTime = getTime();
+
+    const result = await rawBaseQuery(args, api, extraOptions);
+
+    const durationMs =
+      Math.round((getTime() - startTime) * 100) / 100;
+
+    return {
+      result,
+      durationMs
+    };
+  };
+
+  let { result, durationMs } = await executeRequest();
+
   let retries = 0;
   const maxRetries = 2;
 
@@ -118,14 +141,40 @@ export const baseQuery: BaseQueryFn<
   ) {
     retries += 1;
 
+    recordApiRequest({
+      endpoint,
+      method,
+      status:
+        typeof result.error.status === "number"
+          ? result.error.status
+          : result.error.status,
+      durationMs,
+      success: false,
+      attempt: retries,
+      errorType: "RETRYING"
+    });
+
     await new Promise((resolve) =>
       setTimeout(resolve, 500 * 2 ** (retries - 1))
     );
 
-    result = await rawBaseQuery(args, api, extraOptions);
+    const nextAttempt = await executeRequest();
+
+    result = nextAttempt.result;
+    durationMs = nextAttempt.durationMs;
   }
 
   if (result.error) {
+    recordApiRequest({
+      endpoint,
+      method,
+      status: result.error.status,
+      durationMs,
+      success: false,
+      attempt: retries + 1,
+      errorType: String(result.error.status)
+    });
+
     if (result.error.status === 401) {
       window.dispatchEvent(new Event("auth:unauthorized"));
     }
@@ -135,6 +184,15 @@ export const baseQuery: BaseQueryFn<
       meta: result.meta
     };
   }
+
+  recordApiRequest({
+    endpoint,
+    method,
+    status: result.meta?.response?.status ?? "UNKNOWN",
+    durationMs,
+    success: true,
+    attempt: retries + 1
+  });
 
   return {
     data: result.data,

@@ -63,6 +63,7 @@ export default function TicketDashboard() {
 
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
   const {
     canViewAllTickets,
     canCreateTicket,
@@ -151,7 +152,12 @@ export default function TicketDashboard() {
         await updateTicket(selectedTicket.id, data);
         setSuccessMessage("Ticket updated successfully.");
       } else {
-        await createTicket(data);
+        const ticketData =
+          user?.role === "Support Agent"
+            ? { ...data, assignedTo: user.id }
+            : data;
+
+        await createTicket(ticketData);
         setSuccessMessage("Ticket created successfully.");
       }
 

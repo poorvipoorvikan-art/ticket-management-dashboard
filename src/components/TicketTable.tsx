@@ -29,6 +29,44 @@ const ticketStatuses: TicketStatus[] = [
   "Closed"
 ];
 
+const getActionErrorMessage = (
+  error: unknown,
+  action: string,
+  fallback: string
+): string => {
+  if (typeof error === "object" && error !== null) {
+    const apiError = error as {
+      status?: unknown;
+      originalStatus?: unknown;
+      response?: {
+        status?: unknown;
+      };
+    };
+
+    const status =
+      apiError.status ??
+      apiError.response?.status ??
+      apiError.originalStatus;
+
+    if (status === 401 || status === "401") {
+      return "Your session has expired. Please sign in again.";
+    }
+
+    if (status === 403 || status === "403") {
+      return `You do not have permission to ${action}.`;
+    }
+
+    if (
+      status === "FETCH_ERROR" ||
+      status === "TIMEOUT_ERROR"
+    ) {
+      return "Network error. Please check your connection and try again.";
+    }
+  }
+
+  return fallback;
+};
+
 export default function TicketTable({
   tickets,
   allTickets,
@@ -125,8 +163,14 @@ export default function TicketTable({
       setStatusError("");
       setUpdatingTicketId(ticket.id);
       await onUpdate(ticket.id, { ...ticket, status });
-    } catch {
-      setStatusError("Unable to update ticket status. Please try again.");
+    } catch (error) {
+      setStatusError(
+        getActionErrorMessage(
+          error,
+          "update ticket status",
+          "Unable to update ticket status. Please try again."
+        )
+      );
     } finally {
       setUpdatingTicketId(null);
     }
@@ -145,8 +189,14 @@ export default function TicketTable({
       setAssignmentError("");
       setAssigningTicketId(ticket.id);
       await onUpdate(ticket.id, { ...ticket, assignedTo });
-    } catch {
-      setAssignmentError("Unable to assign ticket. Please try again.");
+    } catch (error) {
+      setAssignmentError(
+        getActionErrorMessage(
+          error,
+          "assign tickets",
+          "Unable to assign ticket. Please try again."
+        )
+      );
     } finally {
       setAssigningTicketId(null);
     }
@@ -172,8 +222,14 @@ export default function TicketTable({
       }
 
       dispatch(clearSelectedTickets());
-    } catch {
-      setBulkError("Some tickets could not be updated. Please try again.");
+    } catch (error) {
+      setBulkError(
+        getActionErrorMessage(
+          error,
+          "update ticket status",
+          "Some tickets could not be updated. Please try again."
+        )
+      );
     } finally {
       setBulkUpdating(false);
     }
@@ -200,8 +256,14 @@ export default function TicketTable({
 
       dispatch(clearSelectedTickets());
       setBulkAssignedTo("");
-    } catch {
-      setBulkError("Some tickets could not be assigned. Please try again.");
+    } catch (error) {
+      setBulkError(
+        getActionErrorMessage(
+          error,
+          "assign tickets",
+          "Some tickets could not be assigned. Please try again."
+        )
+      );
     } finally {
       setBulkUpdating(false);
     }
@@ -230,8 +292,14 @@ export default function TicketTable({
       }
 
       dispatch(clearSelectedTickets());
-    } catch {
-      setBulkError("Some tickets could not be deleted. Please try again.");
+    } catch (error) {
+      setBulkError(
+        getActionErrorMessage(
+          error,
+          "delete tickets",
+          "Some tickets could not be deleted. Please try again."
+        )
+      );
     } finally {
       setBulkUpdating(false);
     }
