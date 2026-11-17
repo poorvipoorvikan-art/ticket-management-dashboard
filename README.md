@@ -137,7 +137,83 @@ Authentication and validation failures are not retried.
 - Form validation feedback.
 - Empty-state handling.
 
-### 6. Security Enhancements
+### 6. Performance Optimization
+
+The application uses route-based and component-based code splitting to improve initial loading performance.
+
+#### Route-Based Code Splitting
+
+React `lazy()` and `Suspense` are used to load application pages only when their routes are accessed.
+
+Lazy-loaded pages:
+- Login
+- Ticket Dashboard
+- Unauthorized
+
+A reusable `LoadingFallback` component displays a loading indicator while route components are being downloaded.
+
+#### Component-Based Code Splitting
+
+The TicketForm component is lazy-loaded because it is displayed only when the user opens the create or edit ticket form.
+
+- The ticket form is downloaded separately from the main dashboard bundle.
+- A local Suspense fallback displays while the component loads.
+- TicketTable remains eagerly loaded because it is part of the primary dashboard experience.
+
+#### Lazy Loading Error Handling
+
+A React Error Boundary wraps the application to handle rendering errors, including failures encountered while loading lazy components.
+
+Users can attempt recovery or reload the application.
+
+#### Bundle Analysis
+
+Vite production build output and RollDown DevTools were used to inspect generated JavaScript chunks and their dependencies.
+
+The analysis identified:
+- The main application entry bundle.
+- Separately generated route chunks.
+- The independently generated TicketForm chunk.
+- Dependencies included in the initial application bundle.
+
+#### Production Build Comparison
+
+**Before code splitting:**
+
+| Metric | Size |
+|---|---:|
+| Main JavaScript bundle | 462.21 KB |
+| Gzipped JavaScript | 144.59 KB |
+| CSS | 35.90 KB |
+
+**After route-based and component-based code splitting:**
+
+| Generated chunk | Size | Gzip |
+|---|---:|---:|
+| Main entry | 346.21 KB | 111.45 KB |
+| Ticket Dashboard | 31.00 KB | 7.63 KB |
+| Ticket Form | 83.79 KB | 25.95 KB |
+| Login | 2.97 KB | 1.14 KB |
+| Unauthorized | 0.94 KB | 0.51 KB |
+
+**Results:**
+- The main entry bundle decreased from 462.21 KB to 346.21 KB.
+- The main entry bundle's raw size decreased by approximately 25%.
+- The TicketForm component is now loaded separately when required.
+- The dashboard chunk decreased from 114.45 KB to 31.00 KB after extracting TicketForm.
+
+Code splitting does not necessarily reduce the total JavaScript downloaded when every feature is eventually used. Its main benefit is reducing the JavaScript required during the initial application load.
+
+#### Performance Verification
+
+The implementation was verified using:
+- TypeScript compilation.
+- Vite production builds.
+- RollDown DevTools bundle inspection.
+- Existing Vitest test suite.
+- Manual route and component loading checks.
+
+### 7. Security Enhancements
 
 #### Role-Based Permission Checking
 
@@ -472,6 +548,6 @@ Additional possible improvements:
 
 **Poorvika**
 
-React.js | TypeScript | Redux Toolkit | Node.js | MongoDB
+React.js | TypeScript | Redux Toolkit | Node.js | Express.js
 
 GitHub: https://github.com/poorvipoorvikan-art

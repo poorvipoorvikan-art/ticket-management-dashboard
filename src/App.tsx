@@ -3,17 +3,20 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { store } from "./app/store";
 import AppRoutes from "./routes/AppRoutes";
+import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles/global.css";
 
 function App() {
   return (
-    <Provider store={store}>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
-    </Provider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </Provider>
+    </ErrorBoundary>
   );
 }
 

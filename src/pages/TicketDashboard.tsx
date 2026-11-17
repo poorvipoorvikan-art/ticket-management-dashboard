@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTickets } from "../hooks/useTickets";
 import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermissions";
 import TicketTable from "../components/TicketTable";
-import TicketForm from "../components/TicketForm";
+const TicketForm = lazy(() => import("../components/TicketForm"));
 import type { Ticket, TicketFormData } from "../types/ticket.types";
 
 type SortOption = "newest" | "oldest" | "priority";
@@ -315,11 +315,11 @@ export default function TicketDashboard() {
 
   const userInitials = user?.name
     ? user.name
-        .split(" ")
-        .map((part) => part[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase()
     : "U";
 
   const navigationItems = [
@@ -383,11 +383,10 @@ export default function TicketDashboard() {
                   setStatusFilter(item.filter);
                   setCurrentPage(1);
                 }}
-                className={`group flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all ${
-                  isActive
+                className={`group flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all ${isActive
                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-950/30"
                     : "text-slate-400 hover:bg-white/5 hover:text-white"
-                }`}
+                  }`}
               >
                 <span className="grid size-6 place-items-center text-lg">
                   {item.icon}
@@ -541,11 +540,10 @@ export default function TicketDashboard() {
                   setStatusFilter(item.filter);
                   setCurrentPage(1);
                 }}
-                className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                  statusFilter === item.filter
+                className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${statusFilter === item.filter
                     ? "bg-indigo-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                  }`}
               >
                 {item.label}
               </a>
@@ -883,11 +881,22 @@ export default function TicketDashboard() {
               </p>
             )}
 
-            <TicketForm
-              initialTicket={selectedTicket}
-              onSubmit={handleSubmit}
-              onCancel={closeForm}
-            />
+            <Suspense
+              fallback={
+                <div
+                  className="py-8 text-center text-sm text-slate-500"
+                  role="status"
+                >
+                  Loading ticket form...
+                </div>
+              }
+            >
+              <TicketForm
+                initialTicket={selectedTicket}
+                onSubmit={handleSubmit}
+                onCancel={closeForm}
+              />
+            </Suspense>
           </section>
         </div>
       )}
