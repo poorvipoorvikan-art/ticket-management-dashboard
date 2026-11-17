@@ -2,14 +2,9 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig({
-  devtools: true,
+export default defineConfig(({ mode }) => ({
+  devtools: mode === "development",
   plugins: [react(), tailwindcss()],
-  build: {
-    rolldownOptions: {
-      devtools: {}
-    }
-  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
@@ -20,4 +15,4 @@ export default defineConfig({
       exclude: ["src/test/**", "**/*.test.{ts,tsx}", "**/*.d.ts"]
     }
   }
-});
+}));
