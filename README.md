@@ -230,11 +230,15 @@ The frontend will run at the local Vite development URL.
 
 ## Demo Credentials
 
-The application uses mock authentication for demonstration purposes.
+Use the following credentials to explore the application with different roles.
 
-Use the demo credentials configured in the application to access the different roles.
+| Role | Email | Password |
+|---|---|---|
+| Administrator | admin@example.com | admin123 |
+| Support Manager | manager@example.com | manager123 |
+| Support Agent | agent@example.com | agent123 |
 
-**Note:** This project does not implement production-grade backend authentication or real JWT-based authorization.
+**Note:** This application uses mock authentication for demonstration purposes. It does not implement production-grade backend authentication or real JWT-based authorization.
 
 ## Testing
 
