@@ -1,308 +1,127 @@
 # Task Management – Customer Support Ticket Management Dashboard
 
-Task Management is a role-based Customer Support Ticket Management Dashboard built using React, TypeScript, Redux Toolkit, and RTK Query.
+[![CI](https://github.com/poorvipoorvikan-art/ticket-management-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/poorvipoorvikan-art/ticket-management-dashboard/actions/workflows/ci.yml)
 
-The application helps support teams manage customer tickets efficiently through role-based access control, ticket operations, search, filtering, sorting, pagination, and centralized API reliability and security handling.
+A role-based Customer Support Ticket Management Dashboard built using React, TypeScript, Redux Toolkit, and RTK Query.
 
-## Features
+The application helps support teams manage customer tickets efficiently through role-based access control, ticket operations, search, filtering, sorting, pagination, centralized API error handling, and performance optimization.
 
-### 1. Authentication and Role-Based Access Control (RBAC)
+## Live Demo
 
-The application supports three roles:
+**Live Application:** https://ticket-management-dashboard-gamma.vercel.app
 
-**Administrator**
-- Create, edit, assign, and delete tickets.
-- View all tickets.
-- Update ticket priority and status.
-- Access administrator-only functionality.
+**Backend API:** https://ticket-management-dashboard.onrender.com
 
-**Support Manager**
-- View all tickets.
-- Create and edit tickets.
-- Assign tickets to support agents.
-- Update ticket priority and status.
-- Cannot delete tickets or manage users.
+## Application Screenshots
 
-**Support Agent**
-- View assigned tickets only.
-- Create tickets.
-- Newly created tickets are automatically assigned to the logged-in agent.
-- Update ticket status.
-- Cannot edit, delete, or assign tickets.
+### 1. Dashboard Overview
 
-Additional authentication features:
-- Login and logout functionality.
-- Mock session persistence using session storage.
-- Protected routes.
-- Unauthorized page handling.
-- Requested destination preservation after login.
-- Unauthorized session handling for HTTP 401 responses.
-
-**Authentication limitation:** The current application uses mock credentials and frontend session management. Real backend authentication, JWT access tokens, refresh tokens, and production session cookies are not implemented.
+![Customer Support Dashboard](screenshots/dashboard.png)
 
 ### 2. Ticket Management
 
-- Create new tickets.
-- Edit existing tickets.
-- Delete tickets.
-- Assign tickets to support agents.
-- Update ticket status and priority.
-- View ticket details.
-- Restrict ticket operations according to user permissions.
-- Automatically assign tickets created by Support Agents to their own accounts.
+![Ticket Management](screenshots/ticket-management.png)
 
-### 3. Search, Filtering, and Sorting
+### 3. Role-Based Access Control
 
-- Search tickets.
-- Filter by status.
-- Filter by priority.
-- Filter by assigned agent.
-- Sort ticket records.
-- Paginate ticket results.
-- Select individual tickets.
-- Select multiple tickets for bulk operations.
+![Role-Based Access Control](screenshots/role-permissions.png)
 
-### 4. Bulk Operations
+### 4. API Error Handling
 
-- Bulk status updates.
-- Bulk ticket assignment.
-- Bulk ticket deletion.
-- Permission-based restrictions for bulk operations.
+![API Error Handling](screenshots/error-handling.png)
 
-### 5. Reliability Enhancements
+## Features
 
-The application includes centralized API error handling and improved request reliability.
+### Authentication and Authorization
 
-#### Centralized API Error Handling
+- Mock login functionality.
+- Protected dashboard routes.
+- Role-based access control.
+- Unauthorized access handling.
+- Session management using sessionStorage.
 
-A reusable RTK Query base query handles API errors consistently.
+### Role-Based Permissions
 
-Supported error categories:
-- Network errors.
-- Timeout errors.
-- Client errors.
-- Server errors.
-- Unexpected errors.
-
-HTTP responses are normalized into meaningful user-facing messages without exposing internal server details.
-
-#### Unauthorized Session Handling
-
-- HTTP 401 responses trigger unauthorized session handling.
-- The current mock session is cleared.
-- The user is redirected to the login flow.
-- HTTP 403 responses are handled as permission errors without automatically logging out the user.
-- No access or refresh tokens are currently implemented.
-
-#### Safe Retry Mechanism
-
-GET requests are retried for transient failures.
-
-Retry conditions include:
-- HTTP 408
-- HTTP 429
-- HTTP 500
-- HTTP 502
-- HTTP 503
-- HTTP 504
-- Network failures
-- Timeout failures
-
-Retry configuration:
-- Maximum retries: 2
-- Initial delay: 500 ms
-- Second retry delay: 1000 ms
-
-POST, PATCH, and DELETE requests are not automatically retried to avoid duplicate operations.
-
-Authentication and validation failures are not retried.
-
-#### Request Cancellation and Lifecycle Management
-
-- RTK Query manages request subscriptions and caching.
-- Requests receive an AbortSignal through the fetch base query.
-- Unnecessary subscriptions are cleaned up when components unmount.
-- Query caching and deduplication help avoid unnecessary API calls.
-- Ticket search and filtering are performed locally, avoiding API requests for every keystroke.
-
-#### Improved User Experience
-
-- Initial loading indicators.
-- Background fetching indicators.
-- API error messages.
-- Network failure messages.
-- Retry actions.
-- Success notifications.
-- Mutation loading states.
-- Form validation feedback.
-- Empty-state handling.
-
-### 6. Performance Optimization
-
-The application uses route-based and component-based code splitting to improve initial loading performance.
-
-#### Route-Based Code Splitting
-
-React `lazy()` and `Suspense` are used to load application pages only when their routes are accessed.
-
-Lazy-loaded pages:
-- Login
-- Ticket Dashboard
-- Unauthorized
-
-A reusable `LoadingFallback` component displays a loading indicator while route components are being downloaded.
-
-#### Component-Based Code Splitting
-
-The TicketForm component is lazy-loaded because it is displayed only when the user opens the create or edit ticket form.
-
-- The ticket form is downloaded separately from the main dashboard bundle.
-- A local Suspense fallback displays while the component loads.
-- TicketTable remains eagerly loaded because it is part of the primary dashboard experience.
-
-#### Lazy Loading Error Handling
-
-A React Error Boundary wraps the application to handle rendering errors, including failures encountered while loading lazy components.
-
-Users can attempt recovery or reload the application.
-
-#### Bundle Analysis
-
-Vite production build output and RollDown DevTools were used to inspect generated JavaScript chunks and their dependencies.
-
-The analysis identified:
-- The main application entry bundle.
-- Separately generated route chunks.
-- The independently generated TicketForm chunk.
-- Dependencies included in the initial application bundle.
-
-#### Production Build Comparison
-
-**Before code splitting:**
-
-| Metric | Size |
-|---|---:|
-| Main JavaScript bundle | 462.21 KB |
-| Gzipped JavaScript | 144.59 KB |
-| CSS | 35.90 KB |
-
-**After route-based and component-based code splitting:**
-
-| Generated chunk | Size | Gzip |
-|---|---:|---:|
-| Main entry | 346.21 KB | 111.45 KB |
-| Ticket Dashboard | 31.00 KB | 7.63 KB |
-| Ticket Form | 83.79 KB | 25.95 KB |
-| Login | 2.97 KB | 1.14 KB |
-| Unauthorized | 0.94 KB | 0.51 KB |
-
-**Results:**
-- The main entry bundle decreased from 462.21 KB to 346.21 KB.
-- The main entry bundle's raw size decreased by approximately 25%.
-- The TicketForm component is now loaded separately when required.
-- The dashboard chunk decreased from 114.45 KB to 31.00 KB after extracting TicketForm.
-
-Code splitting does not necessarily reduce the total JavaScript downloaded when every feature is eventually used. Its main benefit is reducing the JavaScript required during the initial application load.
-
-#### Performance Verification
-
-The implementation was verified using:
-- TypeScript compilation.
-- Vite production builds.
-- RollDown DevTools bundle inspection.
-- Existing Vitest test suite.
-- Manual route and component loading checks.
-
-### 7. Security Enhancements
-
-#### Role-Based Permission Checking
-
-A reusable permission-checking system controls frontend access to ticket operations.
+The application supports three roles:
 
 | Feature | Administrator | Support Manager | Support Agent |
 |---|---|---|---|
-| View tickets | All | All | Assigned only |
+| View all tickets | Yes | Yes | No |
+| View assigned tickets | Yes | Yes | Yes |
 | Create tickets | Yes | Yes | Yes |
 | Edit tickets | Yes | Yes | No |
-| Assign tickets | Yes | Yes | No |
 | Delete tickets | Yes | No | No |
-| Update priority | Yes | Yes | No |
-| Update status | Yes | Yes | Yes |
-| Manage users | Yes | No | No |
+| Assign tickets | Yes | Yes | No |
+| Manage priority | Yes | Yes | No |
+| Update ticket status | Yes | Yes | Yes |
 
-Permissions are checked in the UI and in the relevant dashboard operation handlers.
+Support Agents can view their assigned tickets and update ticket statuses. Tickets created by Support Agents are automatically assigned to them.
 
-**Important:** Frontend permission checks are not a substitute for backend authorization. A production backend must independently authenticate users and validate their permissions on every protected API request.
+### Ticket Management
 
-#### Protected Routes
+- Create new support tickets.
+- Edit existing tickets.
+- Delete tickets based on permissions.
+- Assign tickets to support agents.
+- Update ticket status and priority.
+- Bulk ticket selection and operations.
 
-- Dashboard routes require authentication.
-- Unauthenticated users are redirected to login.
-- Requested destinations are preserved during login redirection.
-- Authenticated users without the required role are redirected to an Unauthorized page.
-- Loading state is handled while checking the existing mock session.
+### Search, Filtering and Pagination
 
-#### Secure Ticket Operations
+- Search tickets.
+- Filter tickets by status.
+- Sort ticket records.
+- Paginate ticket results.
+- Display role-specific ticket data.
 
-- Ticket deletion is restricted to Administrators.
-- Ticket assignment is restricted to Administrators and Support Managers.
-- Ticket editing is restricted to Administrators and Support Managers.
-- Support Agents can update ticket status.
-- Dashboard handlers independently check permissions before performing restricted actions.
-- HTTP 401 and 403 responses receive different handling.
-- Support Agents can create tickets that are automatically assigned to themselves.
+### API Reliability and Error Handling
 
-#### Form Validation and Input Security
+- Centralized API handling using RTK Query.
+- Loading, success, empty, and error states.
+- Centralized error normalization.
+- Automatic retry handling for eligible GET requests.
+- Request cancellation and cache management.
+- User-friendly API error messages.
+- Session handling for unauthorized API responses.
 
-Formik and Yup are used to validate ticket form input.
+### Monitoring and Logging
 
-Validation includes:
-- Required field validation.
-- Minimum and maximum input lengths.
-- Email format validation.
-- Priority and status value validation.
-- Rejection of unexpected fields.
-- Trimming of string input.
+- Centralized logging utility.
+- Info, warning, error, and debug log levels.
+- API request and response monitoring.
+- Request duration and failure tracking.
+- Sensitive information excluded from logs.
+- Debug logging restricted in production.
 
-#### Cross-Site Scripting (XSS) Prevention
+### Performance Optimization
 
-- React JSX text interpolation is used to render user-provided content.
-- React automatically escapes text rendered through normal JSX expressions.
-- User-provided ticket content is not rendered using `dangerouslySetInnerHTML`.
-- Tests verify that malicious script and image input are rendered as plain text rather than executable HTML elements.
+- Route-based code splitting.
+- Lazy loading using React.lazy.
+- Suspense-based loading fallbacks.
+- Lazy loading of the ticket form.
+- Optimized production build.
 
-#### Environment and Token Security
+### Error Boundary
 
-- The frontend API URL is configured through `VITE_API_URL`.
-- Vite environment variables prefixed with `VITE_` are exposed to the browser.
-- API secrets, passwords, private keys, and database credentials must not be stored in frontend environment variables.
-- The current mock session is stored in session storage.
-- Session storage is accessible to JavaScript and is therefore vulnerable if an XSS vulnerability exists.
-- Mock credentials are intended only for development and demonstration.
-
-**Production recommendations:**
-- Use backend-managed authentication.
-- Prefer appropriately configured HttpOnly, Secure, and SameSite cookies for session or refresh-token management.
-- Implement CSRF protection when using cookie-based authentication.
-- Enforce authorization on the backend.
-- Use HTTPS.
-- Avoid logging credentials, tokens, or other sensitive information.
-- Configure an appropriate Content Security Policy (CSP).
+- Application-level React Error Boundary.
+- Fallback UI for unexpected rendering errors.
+- Recovery option to reload the dashboard.
 
 ## Technology Stack
 
 | Category | Technologies |
 |---|---|
-| Frontend | React 19, TypeScript |
+| Frontend | React, TypeScript |
 | Build Tool | Vite |
-| Styling | Tailwind CSS v4 |
 | State Management | Redux Toolkit |
 | API Management | RTK Query |
-| Routing | React Router |
-| Forms | Formik, Yup |
-| HTTP Requests | Fetch API, Axios |
-| Backend | Node.js, Express |
-| Database/API | JSON Server |
+| Routing | React Router DOM |
+| Styling | Tailwind CSS v4 |
+| Form Handling | Formik |
+| Validation | Yup |
+| HTTP Requests | Fetch API |
+| Backend | Node.js, Express.js |
+| Mock API | JSON Server |
 | Testing | Vitest, React Testing Library, MSW |
 | Deployment | Vercel, Render |
 
@@ -313,43 +132,37 @@ ticket-management-dashboard/
 │
 ├── public/
 │
+├── screenshots/
+│   ├── dashboard.png
+│   ├── ticket-management.png
+│   ├── role-permissions.png
+│   └── error-handling.png
+│
 ├── src/
+│   ├── app/
 │   ├── components/
-│   ├── context/
 │   ├── features/
-│   │   └── tickets/
-│   │       ├── ticketApi.ts
-│   │       ├── ticketSlice.ts
-│   │       ├── ticketSelectors.ts
-│   │       └── ticketThunks.test.ts
-│   │
 │   ├── hooks/
 │   ├── pages/
 │   ├── routes/
 │   ├── services/
-│   │   └── baseQuery.ts
-│   │
-│   ├── store/
-│   ├── types/
 │   ├── utils/
-│   │
+│   ├── types/
 │   ├── App.tsx
 │   └── main.tsx
 │
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+│
 ├── db.json
 ├── server.cjs
-├── .env.example
 ├── package.json
+├── vite.config.ts
 └── README.md
 ```
 
 ## Installation and Setup
-
-### Prerequisites
-
-- Node.js
-- npm
-- Git
 
 ### 1. Clone the Repository
 
@@ -371,20 +184,24 @@ npm install
 
 ### 4. Configure Environment Variables
 
-Create a `.env` file in the project root.
+Create a `.env` file in the project root:
 
 ```env
 VITE_API_URL=http://localhost:3001
 ```
 
-The API URL should point to the running backend.
-
-Do not add secrets or private credentials to frontend environment variables.
-
 ### 5. Start the Backend
+
+Open a terminal and run:
 
 ```bash
 npm run server
+```
+
+The JSON Server API will run at:
+
+```text
+http://localhost:3001
 ```
 
 ### 6. Start the Frontend
@@ -395,159 +212,98 @@ Open another terminal and run:
 npm run dev
 ```
 
-The Vite development server will display the local application URL in the terminal.
+The frontend will run at the local Vite development URL.
 
 ## Available Scripts
 
-### Start Frontend
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Build the application for production |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Run ESLint |
+| `npm run server` | Start JSON Server |
+| `npm start` | Start the Express server |
+| `npm run test` | Run tests in watch mode |
+| `npm run test:run` | Run all tests once |
+| `npm run test:coverage` | Run tests with coverage |
 
-```bash
-npm run dev
-```
+## Demo Credentials
 
-Starts the frontend development server.
+The application uses mock authentication for demonstration purposes.
 
-### Production Build
+Use the demo credentials configured in the application to access the different roles.
 
-```bash
-npm run build
-```
-
-Runs TypeScript compilation and creates the production build.
-
-### Run Tests
-
-```bash
-npm run test:run
-```
-
-Runs the complete test suite.
-
-### Start Backend
-
-```bash
-npm run server
-```
-
-Starts the backend server.
-
-## Mock Login Credentials
-
-| Role | Email | Password |
-|---|---|---|
-| Administrator | admin@example.com | admin123 |
-| Support Manager | manager@example.com | manager123 |
-| Support Agent | agent@example.com | agent123 |
-
-These credentials are intended for development and demonstration purposes only.
-
-They are not suitable for production authentication.
+**Note:** This project does not implement production-grade backend authentication or real JWT-based authorization.
 
 ## Testing
 
-The application uses Vitest, React Testing Library, and Mock Service Worker.
+The project uses:
 
-The test suite covers:
+- Vitest
+- React Testing Library
+- MSW
 
-**Reliability Testing**
-- Successful API requests.
-- HTTP 400, 401, 403, 404, and 500 responses.
-- Network failures.
-- Automatic retry behavior.
-- Unauthorized session events.
-- Mutation failures.
-- Optimistic update rollback.
-- Ticket creation, updating, and deletion.
-- Loading and error states.
-- Refetch functionality.
+Test coverage includes:
 
-**Security Testing**
-- Permission checks for all supported roles.
-- Protected route behavior.
-- Unauthenticated dashboard access.
-- Unauthorized role access.
-- Ticket deletion restrictions.
-- Ticket assignment restrictions.
-- API 401 and 403 handling.
-- Form validation.
-- Unexpected input rejection.
-- Malicious HTML input rendering.
+- Role-based permission utilities.
+- Protected routes.
+- Ticket components.
+- Ticket forms.
+- API request handling.
+- Error handling.
+- Redux ticket operations.
 
-### Latest Test Results
+**Latest verified local test result:** 76 tests passed across 11 test files.
 
-| Metric | Result |
-|---|---:|
-| Test files passed | 11 |
-| Total tests passed | 76 |
-| Failed tests | 0 |
-| TypeScript compilation | Passed |
-| Production build | Passed |
-
-These results reflect the latest verified test run.
-
-Run the complete test suite using:
+Run the tests using:
 
 ```bash
 npm run test:run
 ```
 
-Run the production build using:
+## Continuous Integration
 
-```bash
-npm run build
-```
+GitHub Actions is configured to automatically run the following checks on pushes and pull requests targeting the `main` branch:
+
+1. Checkout the repository.
+2. Set up Node.js.
+3. Install dependencies.
+4. Run the test suite.
+5. Build the application.
+
+The CI workflow is available here:
+
+https://github.com/poorvipoorvikan-art/ticket-management-dashboard/actions
 
 ## Deployment
 
-**Frontend – Vercel**
+- **Frontend:** Vercel
+- **Backend:** Render
 
-https://ticket-management-dashboard-gamma.vercel.app
+The frontend communicates with the deployed backend through the `VITE_API_URL` environment variable.
 
-**Backend – Render**
+## Security Considerations
 
-https://ticket-management-dashboard.onrender.com
+- Protected frontend routes.
+- Role-based UI permissions.
+- Centralized API error handling.
+- Sensitive information excluded from application logs.
+- Mock authentication clearly separated from production authentication.
 
-Configure the frontend environment variable in the deployment platform:
+**Important:** Frontend permission checks improve the user experience but do not replace backend authorization. Production deployment requires server-side authentication and authorization.
 
-```env
-VITE_API_URL=https://ticket-management-dashboard.onrender.com
-```
+## Future Improvements
 
-Ensure the backend is running and accessible before using the deployed frontend.
-
-The Vercel project is connected to GitHub for deployment when changes are pushed to the connected branch.
-
-## Authentication and Future Improvements
-
-The current application uses mock authentication and does not have a real backend login endpoint, JWT implementation, or token-refresh endpoint.
-
-The expected production authentication flow would be:
-
-1. Authenticate the user through the backend.
-2. Validate credentials on the server.
-3. Establish an authenticated session using an appropriately secured cookie.
-4. Verify authentication and permissions on protected API requests.
-5. Handle expired sessions through the backend authentication flow.
-6. Redirect to login when the session is no longer valid.
-7. Protect cookie-based authentication against CSRF.
-8. Enforce role-based authorization on the backend.
-
-Additional possible improvements:
-
-- Backend JWT authentication.
-- Secure session and refresh-token management.
-- Backend-enforced RBAC.
-- Real-time ticket updates.
-- Audit logs.
-- Advanced reporting and analytics.
-- Backend pagination and filtering.
-- Content Security Policy configuration.
-- Security monitoring and audit trails.
+- Implement real backend authentication.
+- Add JWT access and refresh token handling.
+- Implement server-side role-based authorization.
+- Add advanced analytics and reporting.
+- Improve automated test coverage.
+- Integrate a production database.
 
 ## Author
 
 **Poorvika**
-
-React.js | TypeScript | Redux Toolkit | Node.js | Express.js
 
 GitHub: https://github.com/poorvipoorvikan-art
