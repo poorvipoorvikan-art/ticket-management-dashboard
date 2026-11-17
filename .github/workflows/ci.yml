@@ -12,6 +12,9 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      VITE_API_URL: http://localhost:3001
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
