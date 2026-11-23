@@ -83,7 +83,7 @@
       "subject": "Unable to log in to my account",
       "description": "unable to login",
       "priority": "High",
-      "status": "Open",
+      "status": "In Progress",
       "id": "TKT-1794819556565",
       "createdAt": "2026-11-16T08:59:16.565Z"
     },
@@ -1085,8 +1085,29 @@
       "subject": "Unable to reset password",
       "description": "The password reset link is not working. Please help me regain access to my account.",
       "priority": "Medium",
-      "status": "Open",
+      "status": "Resolved",
       "createdAt": "2026-11-15T14:30:00.000Z"
+    },
+    {
+      "id": "TKT-WS-TEST",
+      "customerName": "Test User",
+      "email": "test@example.com",
+      "subject": "WebSocket Test",
+      "description": "Testing real-time events",
+      "priority": "High",
+      "status": "In Progress",
+      "createdAt": "2026-11-23T09:37:48.066Z"
+    },
+    {
+      "id": "TKT-REALTIME-TEST",
+      "customerName": "Test Customer",
+      "email": "test@example.com",
+      "subject": "Real-time notification test",
+      "description": "Testing WebSocket notifications",
+      "priority": "Medium",
+      "status": "In Progress",
+      "createdAt": "2026-11-23T09:54:44.140Z",
+      "assignedTo": "agent-1"
     }
   ]
 }

@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "json-server --watch db.json --port 3001",
+    "server": "node server.cjs",
     "start": "node server.cjs",
     "test": "vitest",
     "test:run": "vitest run",
@@ -21,6 +21,7 @@
     "react-dom": "^19.3.1",
     "react-redux": "^9.3.1",
     "react-router-dom": "^7.18.5",
+    "ws": "^8.23.0",
     "yup": "^1.7.1"
   },
   "devDependencies": {

@@ -1,11 +1,109 @@
 import type { User } from "../../types/auth.types";
-interface Props { user: User | null; initials: string; greeting: string; onCreate: () => void; canCreate: boolean; onLogout: () => void; }
-export default function DashboardTopBar({ user, initials, greeting, onCreate, canCreate, onLogout }: Props) {
-  return <>
-    <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-5 backdrop-blur-xl sm:px-8">
-      <div className="flex items-center gap-3"><div className="grid size-9 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white md:hidden">S</div><div><p className="text-[11px] font-medium text-slate-400">Workspace</p><div className="mt-0.5 text-sm font-semibold text-slate-800">Overview</div></div></div>
-      <div className="flex items-center gap-3 sm:gap-6"><span className="hidden text-xs font-medium text-slate-500 sm:inline">{new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"})}</span><div className="hidden h-8 w-px bg-slate-200 sm:block" /><span className="relative grid size-9 place-items-center rounded-xl text-lg text-slate-500" aria-label="Notifications">♧<span className="absolute right-2 top-2 size-2 rounded-full border-2 border-white bg-rose-500" /></span><div className="hidden h-8 w-px bg-slate-200 sm:block" /><div className="flex items-center gap-2.5"><div className="grid size-9 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">{initials}</div><div className="hidden sm:block"><p className="text-xs font-semibold text-slate-800">{user?.name}</p><p className="mt-0.5 text-[10px] text-slate-500">{user?.role}</p></div></div><button type="button" onClick={onLogout} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 md:hidden">Logout</button></div>
-    </header>
-    <section className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-center"><div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-indigo-600"><span className="size-1.5 rounded-full bg-indigo-500" />SUPPORT OVERVIEW</div><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-[34px]">{greeting}, {user?.name.split(" ")[0] ?? "there"}<span className="ml-2 text-indigo-500">✦</span></h1><p className="mt-2 text-sm text-slate-500">Here's what's happening with your support tickets today.</p></div>{canCreate && <button type="button" onClick={onCreate} className="inline-flex items-center justify-center gap-2.5 self-start rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:-translate-y-0.5 hover:bg-indigo-700 lg:self-auto"><span className="text-xl leading-none">＋</span>Create ticket</button>}</section>
-  </>;
+import NotificationBell from "../../features/notifications/NotificationBell";
+import ConnectionStatus from "../../features/notifications/ConnectionStatus";
+
+interface Props {
+  user: User | null;
+  initials: string;
+  greeting: string;
+  onCreate: () => void;
+  canCreate: boolean;
+  onLogout: () => void;
+}
+
+export default function DashboardTopBar({
+  user,
+  initials,
+  greeting,
+  onCreate,
+  canCreate,
+  onLogout
+}: Props) {
+  return (
+    <>
+      <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-5 backdrop-blur-xl sm:px-8">
+        <div className="flex items-center gap-3">
+          <div className="grid size-9 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white md:hidden">
+            S
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-slate-400">Workspace</p>
+            <div className="mt-0.5 text-sm font-semibold text-slate-800">
+              Overview
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 sm:gap-6">
+          <span className="hidden text-xs font-medium text-slate-500 sm:inline">
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              year: "numeric"
+            })}
+          </span>
+
+          <div className="hidden h-8 w-px bg-slate-200 sm:block" />
+
+          <ConnectionStatus />
+
+          <NotificationBell />
+
+          <div className="hidden h-8 w-px bg-slate-200 sm:block" />
+
+          <div className="flex items-center gap-2.5">
+            <div className="grid size-9 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+              {initials}
+            </div>
+            <div className="hidden sm:block">
+              <p className="text-xs font-semibold text-slate-800">
+                {user?.name}
+              </p>
+              <p className="mt-0.5 text-[10px] text-slate-500">
+                {user?.role}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 md:hidden"
+          >
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <section className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+        <div>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-indigo-600">
+            <span className="size-1.5 rounded-full bg-indigo-500" />
+            SUPPORT OVERVIEW
+          </div>
+
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-[34px]">
+            {greeting}, {user?.name.split(" ")[0] ?? "there"}
+            <span className="ml-2 text-indigo-500">✦</span>
+          </h1>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Here's what's happening with your support tickets today.
+          </p>
+        </div>
+
+        {canCreate && (
+          <button
+            type="button"
+            onClick={onCreate}
+            className="inline-flex items-center justify-center gap-2.5 self-start rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:-translate-y-0.5 hover:bg-indigo-700 lg:self-auto"
+          >
+            <span className="text-xl leading-none">＋</span>
+            Create ticket
+          </button>
+        )}
+      </section>
+    </>
+  );
 }
