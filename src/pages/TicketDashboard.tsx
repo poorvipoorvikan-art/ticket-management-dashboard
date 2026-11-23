@@ -4,6 +4,7 @@ import { useTickets } from "../hooks/useTickets";
 import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermissions";
 import TicketTable from "../components/TicketTable";
+import { Modal } from "../components/common/Modal";
 const TicketForm = lazy(() => import("../components/TicketForm"));
 import type { Ticket, TicketFormData } from "../types/ticket.types";
 
@@ -833,45 +834,41 @@ export default function TicketDashboard() {
         </div>
       </main>
 
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-5">
-          <section
-            className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xl shadow-slate-950/20 sm:p-7"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ticket-form-title"
-          >
-            <header className="mb-6 flex items-center justify-between">
-              <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-bold tracking-wider text-indigo-600">
-                  <span className="size-1.5 rounded-full bg-indigo-500" />
-                  TICKET MANAGEMENT
-                </div>
-
-                <h2
-                  id="ticket-form-title"
-                  className="text-xl font-bold tracking-tight text-slate-900"
-                >
-                  {selectedTicket ? "Update ticket" : "Create new ticket"}
-                </h2>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  {selectedTicket
-                    ? "Update the ticket information below."
-                    : "Fill in the details to create a support ticket."}
-                </p>
+      <Modal
+        isOpen={showForm}
+        onOpen={() => setShowForm(true)}
+        onClose={closeForm}
+      >
+        <Modal.Content size="md">
+          <Modal.Header className="flex items-center justify-between">
+            <div>
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-bold tracking-wider text-indigo-600">
+                <span className="size-1.5 rounded-full bg-indigo-500" />
+                TICKET MANAGEMENT
               </div>
 
-              <button
-                type="button"
-                onClick={closeForm}
-                aria-label="Close form"
-                className="grid size-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-xl text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-              >
-                ×
-              </button>
-            </header>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                {selectedTicket ? "Update ticket" : "Create new ticket"}
+              </h2>
 
+              <p className="mt-1 text-xs text-slate-500">
+                {selectedTicket
+                  ? "Update the ticket information below."
+                  : "Fill in the details to create a support ticket."}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeForm}
+              aria-label="Close form"
+              className="grid size-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-xl text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+            >
+              ×
+            </button>
+          </Modal.Header>
+
+          <Modal.Body>
             {actionError && (
               <p
                 className="mb-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-600"
@@ -897,9 +894,9 @@ export default function TicketDashboard() {
                 onCancel={closeForm}
               />
             </Suspense>
-          </section>
-        </div>
-      )}
+          </Modal.Body>
+        </Modal.Content>
+      </Modal>
     </div>
   );
 }
